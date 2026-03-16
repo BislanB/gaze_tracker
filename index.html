@@ -78,6 +78,7 @@
     border: 1px solid var(--muted);
     color: var(--muted);
     transition: all 0.3s;
+    white-space: nowrap;
   }
   body.looking .badge { border-color: var(--green); color: var(--green); box-shadow: 0 0 16px rgba(0,230,118,.12); }
   body.away .badge { border-color: var(--red); color: var(--red); box-shadow: 0 0 16px rgba(255,23,68,.15); animation: pulse-r 1s infinite; }
@@ -235,6 +236,18 @@
   .stat .val.r { color: var(--red); }
   .stat .val.y { color: var(--yellow); }
 
+  .error-box {
+    background: rgba(255,23,68,.08);
+    border: 1px solid rgba(255,23,68,.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--red);
+    line-height: 1.6;
+    width: 100%;
+    display: none;
+  }
+
   footer {
     padding: 16px;
     text-align: center;
@@ -256,7 +269,8 @@
     .stat .lbl { font-size: 8px; }
     .stat { padding: 12px 6px; }
     button { padding: 10px 18px; font-size: 12px; }
-    .slider-row { padding: 12px 14px; }
+    .slider-row { padding: 12px 14px; gap: 10px; }
+    .slider-row label { font-size: 9px; }
     .gaze-dot { width: 34px; height: 34px; font-size: 16px; }
   }
 </style>
@@ -282,6 +296,8 @@
     <div class="gaze-dot" id="gazeDot">👁️</div>
   </div>
 
+  <div class="error-box" id="errBox"></div>
+
   <div class="controls">
     <button id="btnStart">▶ Начать</button>
     <button id="btnStop" style="display:none">⏹ Стоп</button>
@@ -289,7 +305,7 @@
   </div>
 
   <div class="slider-row">
-    <label>Чувствительность</label>
+    <label>Чувствит.</label>
     <input type="range" id="sens" min="1" max="10" value="5">
     <span class="sv" id="sensVal">5</span>
   </div>
@@ -301,238 +317,288 @@
   </div>
 </main>
 
-<footer>Gaze Guard · Все данные обрабатываются локально в браузере</footer>
+<footer>Gaze Guard · Все данные обрабатываются локально</footer>
 
-<script type="module">
-// =====================================================
-// MediaPipe Face Landmarker + Blendshapes gaze tracker
-// =====================================================
-import vision from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm';
-const { FaceLandmarker, FilesetResolver } = vision;
+<!--
+  Load MediaPipe Vision as a classic (non-module) script.
+  We dynamically import it inside an async IIFE so we
+  don't need type="module" on the script tag.
+-->
+<script>
+(async function() {
+  'use strict';
 
-/* ── state ── */
-let faceLM = null, running = false, soundOn = true, audioCtx = null;
-let lookSec = 0, totalSec = 0, distCount = 0, wasLook = true;
-let beepCD = 0, statsIv = null, rafId = null, lastT = -1;
+  /* ─── DOM ─── */
+  var vid      = document.getElementById('vid');
+  var cvs      = document.getElementById('cvs');
+  var c        = cvs.getContext('2d');
+  var msgOv    = document.getElementById('msgOv');
+  var msgTxt   = document.getElementById('msgTxt');
+  var spin     = document.getElementById('spin');
+  var gazeDot  = document.getElementById('gazeDot');
+  var badge    = document.getElementById('badge');
+  var btnStart = document.getElementById('btnStart');
+  var btnStop  = document.getElementById('btnStop');
+  var btnSound = document.getElementById('btnSound');
+  var sensEl   = document.getElementById('sens');
+  var sensValE = document.getElementById('sensVal');
+  var errBox   = document.getElementById('errBox');
 
-/* ── dom ── */
-const vid      = document.getElementById('vid');
-const cvs      = document.getElementById('cvs');
-const c        = cvs.getContext('2d');
-const msgOv    = document.getElementById('msgOv');
-const msgTxt   = document.getElementById('msgTxt');
-const spin     = document.getElementById('spin');
-const gazeDot  = document.getElementById('gazeDot');
-const badge    = document.getElementById('badge');
-const btnStart = document.getElementById('btnStart');
-const btnStop  = document.getElementById('btnStop');
-const btnSound = document.getElementById('btnSound');
-const sensEl   = document.getElementById('sens');
-const sensVal  = document.getElementById('sensVal');
+  /* ─── State ─── */
+  var faceLM = null, running = false, soundOn = true, audioCtx = null;
+  var lookSec = 0, totalSec = 0, distCount = 0, wasLook = true;
+  var beepCD = 0, statsIv = null, rafId = null, lastT = -1;
 
-/* ── events ── */
-btnStart.addEventListener('click', startTracking);
-btnStop.addEventListener('click', stopTracking);
-btnSound.addEventListener('click', toggleSound);
-sensEl.addEventListener('input', () => sensVal.textContent = sensEl.value);
+  /* ─── Events ─── */
+  btnStart.addEventListener('click', startTracking);
+  btnStop.addEventListener('click', stopTracking);
+  btnSound.addEventListener('click', toggleSound);
+  sensEl.addEventListener('input', function() { sensValE.textContent = sensEl.value; });
 
-/* ── audio ── */
-function beep(freq = 880, dur = 180) {
-  if (!soundOn) return;
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.connect(g); g.connect(audioCtx.destination);
-    o.type = 'square'; o.frequency.value = freq; g.gain.value = 0.12;
-    o.start();
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
-    o.stop(audioCtx.currentTime + dur / 1000);
-  } catch(_) {}
-}
+  /* ─── Audio beep ─── */
+  function beep(freq, dur) {
+    freq = freq || 880; dur = dur || 180;
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'square'; o.frequency.value = freq; g.gain.value = 0.12;
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
+      o.stop(audioCtx.currentTime + dur / 1000);
+    } catch(e) {}
+  }
 
-/* ── init model ── */
-async function initModel() {
-  const fs = await FilesetResolver.forVisionTasks(
-    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm'
-  );
-  faceLM = await FaceLandmarker.createFromOptions(fs, {
-    baseOptions: {
-      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-      delegate: 'GPU'
-    },
-    runningMode: 'VIDEO',
-    numFaces: 1,
-    outputFaceBlendshapes: true
-  });
-}
+  /* ─── Dynamic import of MediaPipe (works from file://) ─── */
+  function loadVisionModule() {
+    return new Promise(function(resolve, reject) {
+      // Create a module script that exposes the library to window
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.textContent = `
+        import vision from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm';
+        window.__mpVision = vision;
+        window.dispatchEvent(new Event('mpvision-ready'));
+      `;
+      document.head.appendChild(s);
 
-/* ── start ── */
-async function startTracking() {
-  btnStart.style.display = 'none';
-  spin.style.display = 'block';
-  msgTxt.innerHTML = 'Загрузка моделей…';
+      var timeout = setTimeout(function() {
+        reject(new Error('Не удалось загрузить MediaPipe. Проверьте интернет-соединение.'));
+      }, 30000);
 
-  try {
-    await initModel();
-    msgTxt.innerHTML = 'Подключение камеры…';
+      window.addEventListener('mpvision-ready', function() {
+        clearTimeout(timeout);
+        resolve(window.__mpVision);
+      }, { once: true });
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-      audio: false
+      s.onerror = function() {
+        clearTimeout(timeout);
+        reject(new Error('Ошибка загрузки MediaPipe.'));
+      };
     });
-    vid.srcObject = stream;
-    await vid.play();
+  }
 
-    cvs.width = vid.videoWidth;
-    cvs.height = vid.videoHeight;
+  /* ─── Init model ─── */
+  async function initModel(vision) {
+    var FaceLandmarker = vision.FaceLandmarker;
+    var FilesetResolver = vision.FilesetResolver;
 
-    msgOv.classList.add('hidden');
-    gazeDot.style.display = 'flex';
-    btnStop.style.display = '';
-    running = true;
+    var fs = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm'
+    );
 
-    lookSec = 0; totalSec = 0; distCount = 0; wasLook = true;
-    statsIv = setInterval(() => {
-      totalSec++;
-      if (document.body.classList.contains('looking')) lookSec++;
-      updStats();
-    }, 1000);
+    faceLM = await FaceLandmarker.createFromOptions(fs, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+        delegate: 'GPU'
+      },
+      runningMode: 'VIDEO',
+      numFaces: 1,
+      outputFaceBlendshapes: true
+    });
+  }
 
-    // ensure AudioContext is created on user gesture (mobile requirement)
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  /* ─── Start ─── */
+  async function startTracking() {
+    btnStart.style.display = 'none';
+    errBox.style.display = 'none';
+    spin.style.display = 'block';
+    msgTxt.innerHTML = 'Загрузка MediaPipe…';
 
-    detectLoop();
-  } catch(e) {
+    try {
+      var vision = await loadVisionModule();
+      msgTxt.innerHTML = 'Инициализация модели…';
+      await initModel(vision);
+      msgTxt.innerHTML = 'Подключение камеры…';
+
+      var stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+      });
+      vid.srcObject = stream;
+      await vid.play();
+
+      cvs.width = vid.videoWidth;
+      cvs.height = vid.videoHeight;
+
+      msgOv.classList.add('hidden');
+      gazeDot.style.display = 'flex';
+      btnStop.style.display = '';
+      running = true;
+
+      lookSec = 0; totalSec = 0; distCount = 0; wasLook = true;
+      statsIv = setInterval(function() {
+        totalSec++;
+        if (document.body.classList.contains('looking')) lookSec++;
+        updStats();
+      }, 1000);
+
+      // Ensure AudioContext created on gesture (mobile)
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      detectLoop();
+    } catch(e) {
+      spin.style.display = 'none';
+      msgTxt.innerHTML = 'Не удалось запустить';
+      errBox.style.display = 'block';
+      errBox.textContent = e.message || 'Неизвестная ошибка';
+      btnStart.style.display = '';
+    }
+  }
+
+  /* ─── Stop ─── */
+  function stopTracking() {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    clearInterval(statsIv);
+    var s = vid.srcObject;
+    if (s) s.getTracks().forEach(function(t) { t.stop(); });
+    vid.srcObject = null;
+    c.clearRect(0, 0, cvs.width, cvs.height);
+    gazeDot.style.display = 'none';
+    msgOv.classList.remove('hidden');
     spin.style.display = 'none';
-    msgTxt.innerHTML = 'Ошибка: ' + e.message;
+    msgTxt.innerHTML = 'Нажмите «Начать»<br>для запуска камеры';
+    btnStop.style.display = 'none';
     btnStart.style.display = '';
+    document.body.className = '';
+    badge.textContent = 'ОЖИДАНИЕ';
   }
-}
 
-/* ── stop ── */
-function stopTracking() {
-  running = false;
-  if (rafId) cancelAnimationFrame(rafId);
-  clearInterval(statsIv);
-  const s = vid.srcObject;
-  if (s) s.getTracks().forEach(t => t.stop());
-  vid.srcObject = null;
-  c.clearRect(0, 0, cvs.width, cvs.height);
-  gazeDot.style.display = 'none';
-  msgOv.classList.remove('hidden');
-  spin.style.display = 'none';
-  msgTxt.innerHTML = 'Нажмите «Начать»<br>для запуска камеры';
-  btnStop.style.display = 'none';
-  btnStart.style.display = '';
-  document.body.className = '';
-  badge.textContent = 'ОЖИДАНИЕ';
-}
+  /* ─── Detection loop ─── */
+  function detectLoop() {
+    if (!running) return;
+    rafId = requestAnimationFrame(detectLoop);
 
-/* ── detection ── */
-function detectLoop() {
-  if (!running) return;
-  rafId = requestAnimationFrame(detectLoop);
+    var now = performance.now();
+    if (now - lastT < 100) return;
+    lastT = now;
+    if (!faceLM || vid.readyState < 2) return;
 
-  const now = performance.now();
-  if (now - lastT < 100) return;   // cap ~10 fps
-  lastT = now;
-  if (!faceLM || vid.readyState < 2) return;
+    var res = faceLM.detectForVideo(vid, now);
+    c.clearRect(0, 0, cvs.width, cvs.height);
 
-  const res = faceLM.detectForVideo(vid, now);
-  c.clearRect(0, 0, cvs.width, cvs.height);
+    if (res.faceLandmarks && res.faceLandmarks.length > 0) {
+      var lm = res.faceLandmarks[0];
 
-  if (res.faceLandmarks && res.faceLandmarks.length > 0) {
-    const lm = res.faceLandmarks[0];
+      // Subtle dots on key landmarks
+      var keyIdx = [33,133,159,145, 362,263,386,374, 1,4,5,6,168];
+      c.fillStyle = 'rgba(0,230,118,0.35)';
+      for (var k = 0; k < keyIdx.length; k++) {
+        var p = lm[keyIdx[k]];
+        c.beginPath();
+        c.arc(p.x * cvs.width, p.y * cvs.height, 2.5, 0, Math.PI * 2);
+        c.fill();
+      }
 
-    // subtle landmark dots
-    const keyIdx = [33,133,159,145, 362,263,386,374, 1,4,5,6,168];
-    c.fillStyle = 'rgba(0,230,118,0.35)';
-    for (const i of keyIdx) {
-      const p = lm[i];
-      c.beginPath();
-      c.arc(p.x * cvs.width, p.y * cvs.height, 2.5, 0, Math.PI * 2);
-      c.fill();
+      // Head pose from landmarks
+      var sens = parseInt(sensEl.value);
+      var nose = lm[4];
+      var lEye = lm[33];
+      var rEye = lm[263];
+      var fcx = (lEye.x + rEye.x) / 2;
+      var fcy = (lEye.y + rEye.y) / 2;
+      var fw  = Math.abs(rEye.x - lEye.x);
+
+      var hDev = Math.abs(nose.x - fcx) / fw;
+      var vDev = (nose.y - fcy) / fw;
+
+      // Blendshape gaze
+      var gazeOK = true;
+      if (res.faceBlendshapes && res.faceBlendshapes.length > 0) {
+        var bs = res.faceBlendshapes[0].categories;
+        function g(n) {
+          for (var i = 0; i < bs.length; i++) {
+            if (bs[i].categoryName === n) return bs[i].score;
+          }
+          return 0;
+        }
+
+        var blinkL = g('eyeBlinkLeft'),  blinkR = g('eyeBlinkRight');
+        var outL   = g('eyeLookOutLeft'), outR  = g('eyeLookOutRight');
+        var upL    = g('eyeLookUpLeft'),  upR   = g('eyeLookUpRight');
+        var dnL    = g('eyeLookDownLeft'),dnR   = g('eyeLookDownRight');
+
+        var blinkTh = 0.55;
+        var outTh   = 0.3  + (5 - sens) * 0.02;
+        var upTh    = 0.4  + (5 - sens) * 0.02;
+        var dnTh    = 0.5  + (5 - sens) * 0.02;
+
+        if (blinkL > blinkTh && blinkR > blinkTh) gazeOK = false;
+        if ((outL + outR) / 2 > outTh) gazeOK = false;
+        if ((upL + upR) / 2 > upTh) gazeOK = false;
+        if ((dnL + dnR) / 2 > dnTh) gazeOK = false;
+      }
+
+      var hTh = 0.38 - (sens - 5) * 0.025;
+      var vLo = -0.1 - (sens - 5) * 0.01;
+      var vHi = 0.6  + (sens - 5) * 0.03;
+
+      var facing = hDev < hTh && vDev > vLo && vDev < vHi && gazeOK;
+      setGaze(facing);
+    } else {
+      setGaze(false);
     }
+  }
 
-    // ── head pose from landmarks ──
-    const sens = parseInt(sensEl.value);
-    const nose = lm[4];
-    const lEye = lm[33];
-    const rEye = lm[263];
-    const fcx = (lEye.x + rEye.x) / 2;
-    const fcy = (lEye.y + rEye.y) / 2;
-    const fw  = Math.abs(rEye.x - lEye.x);
-
-    const hDev = Math.abs(nose.x - fcx) / fw;
-    const vDev = (nose.y - fcy) / fw;
-
-    // ── blendshape gaze ──
-    let gazeOK = true;
-    if (res.faceBlendshapes && res.faceBlendshapes.length > 0) {
-      const bs = res.faceBlendshapes[0].categories;
-      const g = (n) => { const f = bs.find(b => b.categoryName === n); return f ? f.score : 0; };
-
-      const blinkL = g('eyeBlinkLeft'),  blinkR = g('eyeBlinkRight');
-      const outL   = g('eyeLookOutLeft'), outR  = g('eyeLookOutRight');
-      const upL    = g('eyeLookUpLeft'),  upR   = g('eyeLookUpRight');
-      const dnL    = g('eyeLookDownLeft'),dnR   = g('eyeLookDownRight');
-
-      // sensitivity-adjusted thresholds
-      const blinkTh = 0.55;
-      const outTh   = 0.3  + (5 - sens) * 0.02;
-      const upTh    = 0.4  + (5 - sens) * 0.02;
-      const dnTh    = 0.5  + (5 - sens) * 0.02;
-
-      if (blinkL > blinkTh && blinkR > blinkTh) gazeOK = false;
-      if ((outL + outR) / 2 > outTh) gazeOK = false;
-      if ((upL + upR) / 2 > upTh) gazeOK = false;
-      if ((dnL + dnR) / 2 > dnTh) gazeOK = false;
+  /* ─── Gaze state ─── */
+  function setGaze(looking) {
+    if (looking) {
+      document.body.className = 'looking';
+      badge.textContent = 'СМОТРИТ';
+      gazeDot.textContent = '👁\uFE0F';
+      wasLook = true; beepCD = 0;
+    } else {
+      document.body.className = 'away';
+      badge.textContent = 'ОТВЛЁКСЯ';
+      gazeDot.textContent = '⚠\uFE0F';
+      if (wasLook) { distCount++; wasLook = false; }
+      var now = Date.now();
+      if (now - beepCD > 900) { beep(); beepCD = now; }
     }
-
-    const hTh = 0.38 - (sens - 5) * 0.025;
-    const vLo = -0.1 - (sens - 5) * 0.01;
-    const vHi = 0.6  + (sens - 5) * 0.03;
-
-    const facing = hDev < hTh && vDev > vLo && vDev < vHi && gazeOK;
-    setGaze(facing);
-  } else {
-    setGaze(false);
   }
-}
 
-/* ── gaze state ── */
-function setGaze(looking) {
-  if (looking) {
-    document.body.className = 'looking';
-    badge.textContent = 'СМОТРИТ';
-    gazeDot.textContent = '👁️';
-    wasLook = true; beepCD = 0;
-  } else {
-    document.body.className = 'away';
-    badge.textContent = 'ОТВЛЁКСЯ';
-    gazeDot.textContent = '⚠️';
-    if (wasLook) { distCount++; wasLook = false; }
-    const now = Date.now();
-    if (now - beepCD > 900) { beep(); beepCD = now; }
+  /* ─── Stats ─── */
+  function updStats() {
+    var m = Math.floor(lookSec / 60), s = lookSec % 60;
+    document.getElementById('sTime').textContent = m + ':' + String(s).padStart(2, '0');
+    document.getElementById('sDist').textContent = distCount;
+    if (totalSec > 0) {
+      document.getElementById('sFocus').textContent = Math.round(lookSec / totalSec * 100) + '%';
+    }
   }
-}
 
-/* ── stats ── */
-function updStats() {
-  const m = Math.floor(lookSec / 60), s = lookSec % 60;
-  document.getElementById('sTime').textContent = m + ':' + String(s).padStart(2, '0');
-  document.getElementById('sDist').textContent = distCount;
-  if (totalSec > 0) document.getElementById('sFocus').textContent = Math.round(lookSec / totalSec * 100) + '%';
-}
+  /* ─── Sound toggle ─── */
+  function toggleSound() {
+    soundOn = !soundOn;
+    btnSound.textContent = soundOn ? '🔊 Звук' : '🔇 Тихо';
+    btnSound.classList.toggle('on', soundOn);
+  }
 
-/* ── sound ── */
-function toggleSound() {
-  soundOn = !soundOn;
-  btnSound.textContent = soundOn ? '🔊 Звук' : '🔇 Тихо';
-  btnSound.classList.toggle('on', soundOn);
-}
+})();
 </script>
 </body>
 </html>
