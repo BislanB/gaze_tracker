@@ -98,10 +98,8 @@
 </main>
 <footer>Gaze Guard · MediaPipe FaceMesh + Iris · Данные локально</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.js" crossorigin="anonymous"></script>
-<script>
-(function(){
-'use strict';
+<script type="module">
+import { FaceLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs';
 
 /* ── DOM refs ── */
 var vid=document.getElementById('vid'),cvs=document.getElementById('cvs'),c=cvs.getContext('2d');
@@ -169,40 +167,20 @@ function beep(){
   }catch(e){}
 }
 
-/* ── Resolve MediaPipe globals ── */
-var MP=window.vision||window.mediapipe||window;
-var _FaceLandmarker=MP.FaceLandmarker||window.FaceLandmarker;
-var _FilesetResolver=MP.FilesetResolver||window.FilesetResolver;
-
 /* ── Init MediaPipe ── */
 async function initFaceLandmarker(){
-  if(!_FaceLandmarker||!_FilesetResolver){
-    /* Library not loaded yet — wait with polling */
-    var tries=0,maxTries=40;
-    await new Promise(function(resolve,reject){
-      var iv=setInterval(function(){
-        MP=window.vision||window.mediapipe||window;
-        _FaceLandmarker=MP.FaceLandmarker||window.FaceLandmarker;
-        _FilesetResolver=MP.FilesetResolver||window.FilesetResolver;
-        tries++;
-        mt.innerHTML='Загрузка библиотеки… ('+tries+')';
-        if(_FaceLandmarker&&_FilesetResolver){clearInterval(iv);resolve()}
-        else if(tries>=maxTries){clearInterval(iv);reject(new Error('MediaPipe не загрузился за '+maxTries+' попыток'))}
-      },500);
-    });
-  }
   mt.innerHTML='Загрузка MediaPipe…';sp.style.display='block';
   log('Загрузка WASM…');
   try{
-    var filesetResolver=await _FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    var filesetResolver=await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm'
     );
     log('WASM ✓ Загрузка модели…');
     /* Try GPU first, fallback to CPU */
     var delegates=['GPU','CPU'];
     for(var di=0;di<delegates.length;di++){
       try{
-        faceLandmarker=await _FaceLandmarker.createFromOptions(filesetResolver,{
+        faceLandmarker=await FaceLandmarker.createFromOptions(filesetResolver,{
           baseOptions:{
             modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
             delegate:delegates[di]
@@ -522,7 +500,6 @@ function updStats(){
   if(totalSec>0)document.getElementById('sF').textContent=Math.round(lookSec/totalSec*100)+'%';
 }
 
-})();
 </script>
 </body>
 </html>
