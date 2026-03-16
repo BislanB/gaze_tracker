@@ -2,602 +2,358 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Gaze Guard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-
-  :root {
-    --bg: #08080d;
-    --surface: #101018;
-    --border: #1c1c2c;
-    --green: #00e676;
-    --red: #ff1744;
-    --yellow: #ffd600;
-    --text: #d8d8e8;
-    --muted: #555568;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'JetBrains Mono', monospace;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  header {
-    width: 100%;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .logo {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .eye-icon {
-    width: 28px; height: 28px;
-    border: 2px solid var(--green);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    transition: border-color 0.3s;
-  }
-  .eye-icon .pupil {
-    width: 9px; height: 9px;
-    background: var(--green);
-    border-radius: 50%;
-    transition: background 0.3s;
-  }
-  body.away .eye-icon { border-color: var(--red); }
-  body.away .eye-icon .pupil { background: var(--red); }
-
-  .badge {
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    border: 1px solid var(--muted);
-    color: var(--muted);
-    transition: all 0.3s;
-    white-space: nowrap;
-  }
-  body.looking .badge { border-color: var(--green); color: var(--green); box-shadow: 0 0 16px rgba(0,230,118,.12); }
-  body.away .badge { border-color: var(--red); color: var(--red); box-shadow: 0 0 16px rgba(255,23,68,.15); animation: pulse-r 1s infinite; }
-
-  @keyframes pulse-r {
-    0%,100% { box-shadow: 0 0 16px rgba(255,23,68,.15); }
-    50% { box-shadow: 0 0 28px rgba(255,23,68,.3); }
-  }
-
-  main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px 16px;
-    gap: 20px;
-    width: 100%;
-    max-width: 680px;
-  }
-
-  .vid-wrap {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4/3;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 2px solid var(--border);
-    background: var(--surface);
-    transition: border-color .3s, box-shadow .3s;
-  }
-  body.looking .vid-wrap { border-color: var(--green); box-shadow: 0 0 32px rgba(0,230,118,.08); }
-  body.away .vid-wrap { border-color: var(--red); box-shadow: 0 0 32px rgba(255,23,68,.12); animation: bpulse 1s infinite; }
-  @keyframes bpulse {
-    0%,100%{ box-shadow: 0 0 32px rgba(255,23,68,.12); }
-    50%{ box-shadow: 0 0 50px rgba(255,23,68,.22); }
-  }
-
-  video, .vid-wrap canvas {
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-  }
-  video { transform: scaleX(-1); }
-  .vid-wrap canvas { transform: scaleX(-1); pointer-events: none; }
-
-  .msg-overlay {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 20px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.7;
-    z-index: 2;
-    background: var(--surface);
-    transition: opacity .3s;
-  }
-  .msg-overlay.hidden { opacity: 0; pointer-events: none; }
-
-  .spinner {
-    width: 36px; height: 36px;
-    border: 3px solid var(--border);
-    border-top-color: var(--green);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-    margin-bottom: 14px;
-    display: none;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .gaze-dot {
-    position: absolute;
-    bottom: 12px; right: 12px;
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    display: none;
-    align-items: center; justify-content: center;
-    font-size: 20px;
-    background: rgba(0,0,0,.55);
-    backdrop-filter: blur(6px);
-    border: 2px solid var(--border);
-    z-index: 3;
-    transition: border-color .3s;
-  }
-  body.looking .gaze-dot { border-color: var(--green); }
-  body.away .gaze-dot { border-color: var(--red); animation: shake .45s infinite; }
-  @keyframes shake {
-    0%,100%{ transform: translateX(0); }
-    25%{ transform: translateX(-2px); }
-    75%{ transform: translateX(2px); }
-  }
-
-  .controls {
-    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-  }
-
-  button {
-    font-family: 'JetBrains Mono', monospace;
-    padding: 11px 24px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-    -webkit-user-select: none; user-select: none;
-  }
-  button:active { transform: scale(.97); }
-  button.on { background: var(--green); color: var(--bg); border-color: var(--green); }
-
-  .slider-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 100%;
-  }
-  .slider-row label {
-    font-size: 10px; text-transform: uppercase;
-    letter-spacing: 1.5px; color: var(--muted); white-space: nowrap;
-  }
-  input[type=range] {
-    flex: 1; -webkit-appearance: none; appearance: none;
-    height: 4px; background: var(--border); border-radius: 2px; outline: none;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 18px; height: 18px;
-    border-radius: 50%; background: var(--green); cursor: pointer;
-  }
-  .sv { font-size: 13px; font-weight: 700; color: var(--green); min-width: 28px; text-align: right; }
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3,1fr);
-    gap: 12px;
-    width: 100%;
-  }
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 10px;
-    text-align: center;
-  }
-  .stat .lbl {
-    font-size: 9px; text-transform: uppercase;
-    letter-spacing: 2px; color: var(--muted); margin-bottom: 6px;
-  }
-  .stat .val { font-size: 24px; font-weight: 700; }
-  .stat .val.g { color: var(--green); }
-  .stat .val.r { color: var(--red); }
-  .stat .val.y { color: var(--yellow); }
-
-  .error-box {
-    background: rgba(255,23,68,.08);
-    border: 1px solid rgba(255,23,68,.25);
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-size: 12px;
-    color: var(--red);
-    line-height: 1.6;
-    width: 100%;
-    display: none;
-  }
-
-  footer {
-    padding: 16px;
-    text-align: center;
-    font-size: 10px;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    width: 100%;
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 500px) {
-    header { padding: 12px 14px; }
-    .logo { font-size: 13px; gap: 8px; }
-    .eye-icon { width: 24px; height: 24px; }
-    .eye-icon .pupil { width: 7px; height: 7px; }
-    .badge { font-size: 9px; padding: 4px 10px; }
-    main { padding: 14px 10px; gap: 14px; }
-    .stat .val { font-size: 20px; }
-    .stat .lbl { font-size: 8px; }
-    .stat { padding: 12px 6px; }
-    button { padding: 10px 18px; font-size: 12px; }
-    .slider-row { padding: 12px 14px; gap: 10px; }
-    .slider-row label { font-size: 9px; }
-    .gaze-dot { width: 34px; height: 34px; font-size: 16px; }
-  }
+  :root{--bg:#08080d;--surface:#101018;--border:#1c1c2c;--green:#00e676;--red:#ff1744;--yellow:#ffd600;--text:#d8d8e8;--muted:#555568;--cyan:#00e5ff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100dvh;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+  header{width:100%;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .logo{font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+  .eye-icon{width:26px;height:26px;border:2px solid var(--muted);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:border-color .3s}
+  .eye-icon .pupil{width:8px;height:8px;background:var(--muted);border-radius:50%;transition:background .3s}
+  .badge{padding:5px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border:1px solid var(--muted);color:var(--muted);transition:all .3s;white-space:nowrap}
+  body.looking .eye-icon{border-color:var(--green)}body.looking .eye-icon .pupil{background:var(--green)}
+  body.looking .badge{border-color:var(--green);color:var(--green);box-shadow:0 0 14px rgba(0,230,118,.12)}
+  body.away .eye-icon{border-color:var(--red)}body.away .eye-icon .pupil{background:var(--red)}
+  body.away .badge{border-color:var(--red);color:var(--red);box-shadow:0 0 14px rgba(255,23,68,.15);animation:pr 1s infinite}
+  @keyframes pr{50%{box-shadow:0 0 26px rgba(255,23,68,.3)}}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:18px;width:100%;max-width:660px}
+  .vw{position:relative;width:100%;aspect-ratio:4/3;border-radius:14px;overflow:hidden;border:2px solid var(--border);background:var(--surface);transition:border-color .3s,box-shadow .3s}
+  body.looking .vw{border-color:var(--green);box-shadow:0 0 28px rgba(0,230,118,.07)}
+  body.away .vw{border-color:var(--red);box-shadow:0 0 28px rgba(255,23,68,.1);animation:bp 1s infinite}
+  @keyframes bp{50%{box-shadow:0 0 46px rgba(255,23,68,.2)}}
+  video,.vw canvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+  video{transform:scaleX(-1)}.vw canvas{transform:scaleX(-1);pointer-events:none}
+  .ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;font-size:13px;color:var(--muted);line-height:1.7;z-index:2;background:var(--surface);transition:opacity .4s}
+  .ov.h{opacity:0;pointer-events:none}
+  .sp{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px;display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .gd{position:absolute;bottom:10px;right:10px;width:38px;height:38px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:18px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border:2px solid var(--border);z-index:3;transition:border-color .3s}
+  body.looking .gd{border-color:var(--green)}body.away .gd{border-color:var(--red);animation:sh .4s infinite}
+  @keyframes sh{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+  .cal{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;background:rgba(8,8,13,.85);backdrop-filter:blur(4px);text-align:center;transition:opacity .4s}
+  .cal.h{opacity:0;pointer-events:none}
+  .cal .ring{width:80px;height:80px;border:3px solid var(--cyan);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:16px;position:relative}
+  .cal .ring svg{position:absolute;top:-3px;left:-3px;width:86px;height:86px;transform:rotate(-90deg)}
+  .cal .ring svg circle{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset .15s}
+  .cal .ring .dot{width:14px;height:14px;background:var(--cyan);border-radius:50%}
+  .cal .txt{font-size:14px;color:var(--cyan);margin-bottom:8px}
+  .cal .sub{font-size:11px;color:var(--muted);max-width:280px;line-height:1.5}
+  .cal .skip-btn{margin-top:14px;padding:8px 18px;border-radius:8px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer}
+  .dbg-panel{position:absolute;top:10px;left:10px;font-size:9px;color:var(--cyan);z-index:4;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:8px;pointer-events:none;display:none;line-height:1.6;max-width:280px}
+  .ctrls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  button{font-family:inherit;padding:11px 22px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;-webkit-user-select:none;user-select:none}
+  button:active{transform:scale(.96)}button.on{background:var(--green);color:var(--bg);border-color:var(--green)}
+  .sr{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%}
+  .sr label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);white-space:nowrap}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:var(--border);border-radius:2px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer}
+  .svl{font-size:13px;font-weight:700;color:var(--green);min-width:24px;text-align:right}
+  .sts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+  .st{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center}
+  .st .l{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px}
+  .st .v{font-size:22px;font-weight:700}.st .v.g{color:var(--green)}.st .v.r{color:var(--red)}.st .v.y{color:var(--yellow)}
+  .eb{background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.25);border-radius:10px;padding:14px 16px;font-size:11px;color:var(--red);line-height:1.6;width:100%;display:none;word-break:break-word}
+  .log{font-size:10px;color:var(--muted);text-align:center;min-height:14px;line-height:1.4}
+  footer{padding:14px;text-align:center;font-size:10px;color:var(--muted);border-top:1px solid var(--border);width:100%}
+  @media(max-width:500px){header{padding:10px 12px}.logo{font-size:12px;gap:7px}.eye-icon{width:22px;height:22px}.eye-icon .pupil{width:6px;height:6px}.badge{font-size:9px;padding:4px 10px}main{padding:12px 10px;gap:12px}.st .v{font-size:18px}.st .l{font-size:8px}.st{padding:10px 5px}button{padding:10px 16px;font-size:12px}.sr{padding:10px 12px;gap:8px}.sr label{font-size:9px}.gd{width:32px;height:32px;font-size:15px}}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="logo">
-    <div class="eye-icon"><div class="pupil"></div></div>
-    GAZE GUARD
-  </div>
+  <div class="logo"><div class="eye-icon"><div class="pupil"></div></div>GAZE GUARD</div>
   <div class="badge" id="badge">ОЖИДАНИЕ</div>
 </header>
-
 <main>
-  <div class="vid-wrap">
+  <div class="vw">
     <video id="vid" autoplay muted playsinline></video>
     <canvas id="cvs"></canvas>
-    <div class="msg-overlay" id="msgOv">
-      <div class="spinner" id="spin"></div>
-      <div id="msgTxt">Нажмите «Начать»<br>для запуска камеры</div>
+    <div class="ov" id="ov"><div class="sp" id="sp"></div><div id="mt">Загрузка…</div></div>
+    <div class="cal h" id="cal">
+      <div class="ring"><svg viewBox="0 0 86 86"><circle id="calCircle" cx="43" cy="43" r="40" stroke-dasharray="251" stroke-dashoffset="251"/></svg><div class="dot"></div></div>
+      <div class="txt">Смотрите в камеру</div>
+      <div class="sub" id="calSub">Ожидание…</div>
+      <button class="skip-btn" id="calSkip">Пропустить</button>
     </div>
-    <div class="gaze-dot" id="gazeDot">👁️</div>
+    <div class="gd" id="gd">👁️</div>
+    <div class="dbg-panel" id="dbgP"></div>
   </div>
-
-  <div class="error-box" id="errBox"></div>
-
-  <div class="controls">
-    <button id="btnStart">▶ Начать</button>
-    <button id="btnStop" style="display:none">⏹ Стоп</button>
-    <button id="btnSound" class="on">🔊 Звук</button>
+  <div class="eb" id="eb"></div>
+  <div class="log" id="log"></div>
+  <div class="ctrls">
+    <button id="go" disabled style="opacity:.4">▶ Начать</button>
+    <button id="no" style="display:none">⏹ Стоп</button>
+    <button id="dbg">🔍 Отладка</button>
+    <button id="recal" style="display:none">🎯 Калибровка</button>
   </div>
-
-  <div class="slider-row">
-    <label>Чувствит.</label>
-    <input type="range" id="sens" min="1" max="10" value="5">
-    <span class="sv" id="sensVal">5</span>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="lbl">Смотрит</div><div class="val g" id="sTime">0:00</div></div>
-    <div class="stat"><div class="lbl">Отвлечений</div><div class="val r" id="sDist">0</div></div>
-    <div class="stat"><div class="lbl">Фокус</div><div class="val y" id="sFocus">—</div></div>
+  <div class="sr"><label>Чувствит.</label><input type="range" id="sens" min="1" max="50" value="15"><span class="svl" id="sv">15</span></div>
+  <div class="sr"><label>Громкость</label><input type="range" id="vol" min="0" max="100" value="50"><span class="svl" id="vv">50%</span></div>
+  <div class="sts">
+    <div class="st"><div class="l">Смотрит</div><div class="v g" id="sT">0:00</div></div>
+    <div class="st"><div class="l">Отвлечений</div><div class="v r" id="sD">0</div></div>
+    <div class="st"><div class="l">Фокус</div><div class="v y" id="sF">—</div></div>
   </div>
 </main>
+<footer>Gaze Guard · BlazeFace + Pixel Iris · Данные локально</footer>
 
-<footer>Gaze Guard · Все данные обрабатываются локально</footer>
+<!-- ONLY blazeface — proven working -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
 
-<!--
-  Load MediaPipe Vision as a classic (non-module) script.
-  We dynamically import it inside an async IIFE so we
-  don't need type="module" on the script tag.
--->
 <script>
-(async function() {
-  'use strict';
+(function(){
+'use strict';
 
-  /* ─── DOM ─── */
-  var vid      = document.getElementById('vid');
-  var cvs      = document.getElementById('cvs');
-  var c        = cvs.getContext('2d');
-  var msgOv    = document.getElementById('msgOv');
-  var msgTxt   = document.getElementById('msgTxt');
-  var spin     = document.getElementById('spin');
-  var gazeDot  = document.getElementById('gazeDot');
-  var badge    = document.getElementById('badge');
-  var btnStart = document.getElementById('btnStart');
-  var btnStop  = document.getElementById('btnStop');
-  var btnSound = document.getElementById('btnSound');
-  var sensEl   = document.getElementById('sens');
-  var sensValE = document.getElementById('sensVal');
-  var errBox   = document.getElementById('errBox');
+var vid=document.getElementById('vid'),cvs=document.getElementById('cvs'),c=cvs.getContext('2d');
+var ov=document.getElementById('ov'),mt=document.getElementById('mt'),sp=document.getElementById('sp');
+var gd=document.getElementById('gd'),bdg=document.getElementById('badge');
+var goB=document.getElementById('go'),noB=document.getElementById('no');
+var sndB=null,dbgB=document.getElementById('dbg'),recalB=document.getElementById('recal');
+var sensE=document.getElementById('sens'),svE=document.getElementById('sv');
+var volE=document.getElementById('vol'),vvE=document.getElementById('vv');
+var eb=document.getElementById('eb'),logE=document.getElementById('log'),dbgP=document.getElementById('dbgP');
+var calOv=document.getElementById('cal'),calSub=document.getElementById('calSub');
+var calCircle=document.getElementById('calCircle'),calSkip=document.getElementById('calSkip');
 
-  /* ─── State ─── */
-  var faceLM = null, running = false, soundOn = true, audioCtx = null;
-  var lookSec = 0, totalSec = 0, distCount = 0, wasLook = true;
-  var beepCD = 0, statsIv = null, rafId = null, lastT = -1;
+/* Hidden canvas for pixel iris analysis */
+var eyeCvs=document.createElement('canvas');
+var eyeCtx=eyeCvs.getContext('2d',{willReadFrequently:true});
 
-  /* ─── Events ─── */
-  btnStart.addEventListener('click', startTracking);
-  btnStop.addEventListener('click', stopTracking);
-  btnSound.addEventListener('click', toggleSound);
-  sensEl.addEventListener('input', function() { sensValE.textContent = sensEl.value; });
+/* Hidden canvas to draw video frame for pixel reading */
+var frameCvs=document.createElement('canvas');
+var frameCtx=frameCvs.getContext('2d',{willReadFrequently:true});
 
-  /* ─── Audio beep ─── */
-  function beep(freq, dur) {
-    freq = freq || 880; dur = dur || 180;
-    if (!soundOn) return;
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      var o = audioCtx.createOscillator();
-      var g = audioCtx.createGain();
-      o.connect(g); g.connect(audioCtx.destination);
-      o.type = 'square'; o.frequency.value = freq; g.gain.value = 0.12;
-      o.start();
-      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
-      o.stop(audioCtx.currentTime + dur / 1000);
-    } catch(e) {}
+var model=null,running=false,soundOn=true,audioCtx=null,showDebug=false;
+var lookSec=0,totalSec=0,distN=0,wasLook=true,beepCD=0,statsIv=null;
+var gazeBuf=[],BUF=7;
+var CAL_NEED=15,calibrating=false,calSamples=[];
+var baseline={gazeX:0.5,gazeY:0.5,noseOff:0,earRatio:1,calibrated:false};
+
+goB.addEventListener('click',startTracking);
+noB.addEventListener('click',stopTracking);
+recalB.addEventListener('click',startCal);
+calSkip.addEventListener('click',skipCal);
+dbgB.addEventListener('click',function(){showDebug=!showDebug;dbgP.style.display=showDebug?'block':'none';dbgB.classList.toggle('on',showDebug)});
+sensE.addEventListener('input',function(){svE.textContent=sensE.value});
+volE.addEventListener('input',function(){vvE.textContent=volE.value+'%'});
+
+function log(m){logE.textContent=m}
+function showErr(m){eb.textContent=m;eb.style.display='block'}
+function hideErr(){eb.style.display='none'}
+function beep(){var v=parseInt(volE.value);if(!v)return;try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='square';o.frequency.value=880;g.gain.value=v/250;o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+.18);o.stop(audioCtx.currentTime+.18)}catch(e){}}
+
+/* Lib check */
+var libN=0,libIv=setInterval(function(){
+  libN++;var ok1=typeof tf!=='undefined',ok2=typeof blazeface!=='undefined';
+  if(ok1&&ok2){clearInterval(libIv);mt.innerHTML='Нажмите «Начать»';goB.disabled=false;goB.style.opacity='1';log('Готово ✓');return}
+  mt.innerHTML='Загрузка: '+(ok1?'TF✓':'TF…')+' '+(ok2?'BF✓':'BF…');
+  if(libN>60){clearInterval(libIv);mt.innerHTML='Ошибка';showErr('Библиотеки не загрузились')}
+},500);
+
+/* ═══════════════════════════════════
+   PIXEL IRIS DETECTION
+   Crop eye area from video frame,
+   find center of darkest pixels = pupil
+   ═══════════════════════════════════ */
+function findPupil(eyeX,eyeY,fw,fh){
+  var vw=vid.videoWidth,vh=vid.videoHeight;
+  var ew=Math.round(fw*0.30);
+  var eh=Math.round(fh*0.18);
+  var ex=Math.round(eyeX-ew/2);
+  var ey=Math.round(eyeY-eh/2);
+  if(ex<0)ex=0;if(ey<0)ey=0;
+  if(ex+ew>vw)ew=vw-ex;if(ey+eh>vh)eh=vh-ey;
+  if(ew<6||eh<6)return{x:.5,y:.5,ok:false};
+
+  eyeCvs.width=ew;eyeCvs.height=eh;
+  eyeCtx.drawImage(frameCvs,ex,ey,ew,eh,0,0,ew,eh);
+  var id=eyeCtx.getImageData(0,0,ew,eh),d=id.data;
+
+  var gray=new Float32Array(ew*eh),mn=255,mx=0;
+  for(var i=0;i<gray.length;i++){
+    var v=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
+    gray[i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
+  }
+  var thr=mn+(mx-mn)*.3;
+  var sx=0,sy=0,sw=0;
+  for(var py=0;py<eh;py++)for(var px=0;px<ew;px++){
+    var val=gray[py*ew+px];
+    if(val<=thr){var w=thr-val+1;sx+=px*w;sy+=py*w;sw+=w}
+  }
+  if(sw<1)return{x:.5,y:.5,ok:false};
+  return{x:(sx/sw)/ew,y:(sy/sw)/eh,ok:true};
+}
+
+/* Start */
+async function startTracking(){
+  if(typeof blazeface==='undefined'){showErr('BlazeFace не загружен');return}
+  hideErr();goB.style.display='none';sp.style.display='block';mt.innerHTML='Модель…';log('BlazeFace…');
+  try{
+    model=await blazeface.load();
+    log('Модель ✓');mt.innerHTML='Камера…';
+    var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    vid.srcObject=stream;
+    await new Promise(function(res,rej){vid.onloadedmetadata=function(){vid.play().then(res).catch(rej)};setTimeout(function(){rej(new Error('Камера не ответила'))},15000)});
+    cvs.width=vid.videoWidth;cvs.height=vid.videoHeight;
+    frameCvs.width=vid.videoWidth;frameCvs.height=vid.videoHeight;
+    log('Камера '+vid.videoWidth+'x'+vid.videoHeight+' ✓');
+    await new Promise(function(r){setTimeout(r,500)});
+    var test=await model.estimateFaces(vid,false);
+    log('Прогрев ✓ Лиц:'+test.length);
+    ov.classList.add('h');gd.style.display='flex';noB.style.display='';recalB.style.display='';
+    running=true;lookSec=0;totalSec=0;distN=0;wasLook=true;gazeBuf=[];
+    if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}
+    loop();startCal();
+  }catch(e){sp.style.display='none';mt.innerHTML='Ошибка';showErr(e.message||String(e));goB.style.display=''}
+}
+
+/* Calibration */
+function startCal(){calibrating=true;calSamples=[];baseline.calibrated=false;calOv.classList.remove('h');calCircle.setAttribute('stroke-dashoffset','251');calSub.textContent='Ожидание лица…'}
+function skipCal(){calibrating=false;baseline.calibrated=false;calOv.classList.add('h');log('Стандартные значения');startStats()}
+function addCal(s){
+  calSamples.push(s);
+  var pct=Math.min(calSamples.length/CAL_NEED,1);
+  calCircle.setAttribute('stroke-dashoffset',String(Math.round(251*(1-pct))));
+  calSub.textContent='Сбор: '+calSamples.length+'/'+CAL_NEED;
+  if(calSamples.length>=CAL_NEED)finishCal();
+}
+function finishCal(){
+  calibrating=false;calOv.classList.add('h');
+  if(calSamples.length<3){baseline.calibrated=false;startStats();return}
+  function med(a){var s=a.slice().sort(function(x,y){return x-y});var m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+  baseline.gazeX=med(calSamples.map(function(s){return s.gx}));
+  baseline.gazeY=med(calSamples.map(function(s){return s.gy}));
+  baseline.noseOff=med(calSamples.map(function(s){return s.no}));
+  baseline.earRatio=med(calSamples.map(function(s){return s.er}));
+  baseline.calibrated=true;
+  log('Калибровка ✓ GX:'+baseline.gazeX.toFixed(2)+' GY:'+baseline.gazeY.toFixed(2));
+  startStats();
+}
+function startStats(){if(statsIv)clearInterval(statsIv);statsIv=setInterval(function(){totalSec++;if(document.body.classList.contains('looking'))lookSec++;updStats()},1000)}
+
+/* Stop */
+function stopTracking(){
+  running=false;calibrating=false;if(statsIv){clearInterval(statsIv);statsIv=null}
+  var s=vid.srcObject;if(s)s.getTracks().forEach(function(t){t.stop()});vid.srcObject=null;
+  c.clearRect(0,0,cvs.width,cvs.height);gd.style.display='none';calOv.classList.add('h');
+  ov.classList.remove('h');sp.style.display='none';mt.innerHTML='Нажмите «Начать»';
+  noB.style.display='none';recalB.style.display='none';goB.style.display='';
+  document.body.className='';bdg.textContent='ОЖИДАНИЕ';log('Стоп');
+}
+
+/* ═══ MAIN LOOP ═══ */
+async function loop(){
+  if(!running)return;
+  try{await detect()}catch(e){}
+  if(running)setTimeout(loop,100);
+}
+
+async function detect(){
+  if(!model||vid.readyState<2)return;
+
+  /* Draw current video frame to hidden canvas (for pixel reading) */
+  frameCtx.drawImage(vid,0,0);
+
+  var faces=await model.estimateFaces(vid,false);
+  c.clearRect(0,0,cvs.width,cvs.height);
+
+  if(!faces||faces.length===0){
+    if(calibrating)calSub.textContent='Лицо не найдено…';
+    else pushGaze(false);
+    return;
   }
 
-  /* ─── Dynamic import of MediaPipe (works from file://) ─── */
-  function loadVisionModule() {
-    return new Promise(function(resolve, reject) {
-      // Create a module script that exposes the library to window
-      var s = document.createElement('script');
-      s.type = 'module';
-      s.textContent = `
-        import vision from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm';
-        window.__mpVision = vision;
-        window.dispatchEvent(new Event('mpvision-ready'));
-      `;
-      document.head.appendChild(s);
+  var face=faces[0];
+  var prob=face.probability;prob=prob&&prob.length?prob[0]:(typeof prob==='number'?prob:0);
+  var lm=face.landmarks;
+  function pt(i){var p=lm[i];return(p&&p.arraySync)?p.arraySync():p}
+  var rightEye=pt(0),leftEye=pt(1),nose=pt(2),mouth=pt(3),rightEar=pt(4),leftEar=pt(5);
+  var tl=face.topLeft;tl=(tl&&tl.arraySync)?tl.arraySync():tl;
+  var br=face.bottomRight;br=(br&&br.arraySync)?br.arraySync():br;
+  var fx=tl[0],fy=tl[1],fw=br[0]-tl[0],fh=br[1]-tl[1];
+  var vw=cvs.width,vh=cvs.height;
 
-      var timeout = setTimeout(function() {
-        reject(new Error('Не удалось загрузить MediaPipe. Проверьте интернет-соединение.'));
-      }, 30000);
+  /* Draw */
+  c.strokeStyle='rgba(0,230,118,0.15)';c.lineWidth=1.5;c.strokeRect(fx,fy,fw,fh);
+  c.fillStyle='rgba(0,230,118,0.4)';
+  [rightEye,leftEye,nose,mouth,rightEar,leftEar].forEach(function(p){if(p){c.beginPath();c.arc(p[0],p[1],3,0,Math.PI*2);c.fill()}});
 
-      window.addEventListener('mpvision-ready', function() {
-        clearTimeout(timeout);
-        resolve(window.__mpVision);
-      }, { once: true });
+  /* Head features */
+  var eyeMX=(leftEye[0]+rightEye[0])/2;
+  var noseOff=(nose[0]-eyeMX)/fw;
+  var dL=Math.hypot(leftEye[0]-leftEar[0],leftEye[1]-leftEar[1]);
+  var dR=Math.hypot(rightEye[0]-rightEar[0],rightEye[1]-rightEar[1]);
+  var earRatio=Math.min(dL,dR)/(Math.max(dL,dR)+.001);
+  var faceCX=(fx+fw/2)/vw,faceCY=(fy+fh/2)/vh;
+  var offFrame=Math.max(Math.abs(faceCX-.5),Math.abs(faceCY-.5));
+  var faceArea=(fw*fh)/(vw*vh);
 
-      s.onerror = function() {
-        clearTimeout(timeout);
-        reject(new Error('Ошибка загрузки MediaPipe.'));
-      };
-    });
+  /* Pixel iris */
+  var gL=findPupil(leftEye[0],leftEye[1],fw,fh);
+  var gR=findPupil(rightEye[0],rightEye[1],fw,fh);
+  var gazeX=.5,gazeY=.5,gazeOK=false;
+  if(gL.ok&&gR.ok){gazeX=(gL.x+gR.x)/2;gazeY=(gL.y+gR.y)/2;gazeOK=true}
+  else if(gL.ok){gazeX=gL.x;gazeY=gL.y;gazeOK=true}
+  else if(gR.ok){gazeX=gR.x;gazeY=gR.y;gazeOK=true}
+
+  /* Draw iris dots */
+  if(gazeOK){
+    c.fillStyle='rgba(0,229,255,0.7)';
+    if(gL.ok){c.beginPath();c.arc(leftEye[0]+(gL.x-.5)*fw*.3,leftEye[1]+(gL.y-.5)*fh*.18,4,0,Math.PI*2);c.fill()}
+    if(gR.ok){c.beginPath();c.arc(rightEye[0]+(gR.x-.5)*fw*.3,rightEye[1]+(gR.y-.5)*fh*.18,4,0,Math.PI*2);c.fill()}
   }
 
-  /* ─── Init model ─── */
-  async function initModel(vision) {
-    var FaceLandmarker = vision.FaceLandmarker;
-    var FilesetResolver = vision.FilesetResolver;
+  /* Calibration */
+  if(calibrating){addCal({gx:gazeX,gy:gazeY,no:noseOff,er:earRatio});return}
 
-    var fs = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm'
-    );
+  /* Scoring */
+  var bGX=baseline.calibrated?baseline.gazeX:.5;
+  var bGY=baseline.calibrated?baseline.gazeY:.5;
+  var bNO=baseline.calibrated?baseline.noseOff:0;
+  var bER=baseline.calibrated?baseline.earRatio:1;
 
-    faceLM = await FaceLandmarker.createFromOptions(fs, {
-      baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'GPU'
-      },
-      runningMode: 'VIDEO',
-      numFaces: 1,
-      outputFaceBlendshapes: true
-    });
+  var dGX=Math.abs(gazeX-bGX),dGY=Math.abs(gazeY-bGY);
+  var dNO=Math.abs(noseOff-bNO),dER=Math.abs(earRatio-bER);
+
+  var sens=parseInt(sensE.value),k=0.4+(sens-1)*0.053;
+
+  var sGX=gazeOK?Math.exp(-Math.pow(dGX*k/.20,2)):.7;
+  var sGY=gazeOK?Math.exp(-Math.pow(dGY*k/.22,2)):.7;
+  var sNO=Math.exp(-Math.pow(dNO*k/.25,2));
+  var sER=Math.exp(-Math.pow(dER*k/.35,2));
+  var sFF=offFrame<.38?1:Math.max(0,1-(offFrame-.38)/.12);
+  var sFA=faceArea>.008?1:faceArea/.008;
+  var sC=prob>.9?1:prob/.9;
+
+  var score=gazeOK
+    ?sGX*.22+sGY*.10+sNO*.22+sER*.16+sFF*.08+sFA*.05+sC*.17
+    :sNO*.30+sER*.25+sFF*.12+sFA*.08+sC*.25;
+
+  var thr=.35+(sens-1)*.009;
+  var looking=score>thr;
+
+  if(showDebug){
+    dbgP.innerHTML=
+      '<b>Score:'+score.toFixed(2)+'/'+thr.toFixed(2)+'</b> '+(looking?'<span style="color:var(--green)">LOOK</span>':'<span style="color:var(--red)">AWAY</span>')+'<br>'+
+      'GX:'+gazeX.toFixed(2)+' b:'+bGX.toFixed(2)+' s:'+sGX.toFixed(2)+'<br>'+
+      'GY:'+gazeY.toFixed(2)+' b:'+bGY.toFixed(2)+' s:'+sGY.toFixed(2)+'<br>'+
+      'NO:'+noseOff.toFixed(3)+' b:'+bNO.toFixed(3)+' s:'+sNO.toFixed(2)+'<br>'+
+      'ER:'+earRatio.toFixed(2)+' b:'+bER.toFixed(2)+' s:'+sER.toFixed(2)+'<br>'+
+      'sFF:'+sFF.toFixed(2)+' sFA:'+sFA.toFixed(2)+' P:'+prob.toFixed(2)+'<br>'+
+      'Iris:'+(gazeOK?'Y':'N')+' Cal:'+(baseline.calibrated?'Y':'N');
   }
+  pushGaze(looking);
+}
 
-  /* ─── Start ─── */
-  async function startTracking() {
-    btnStart.style.display = 'none';
-    errBox.style.display = 'none';
-    spin.style.display = 'block';
-    msgTxt.innerHTML = 'Загрузка MediaPipe…';
-
-    try {
-      var vision = await loadVisionModule();
-      msgTxt.innerHTML = 'Инициализация модели…';
-      await initModel(vision);
-      msgTxt.innerHTML = 'Подключение камеры…';
-
-      var stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false
-      });
-      vid.srcObject = stream;
-      await vid.play();
-
-      cvs.width = vid.videoWidth;
-      cvs.height = vid.videoHeight;
-
-      msgOv.classList.add('hidden');
-      gazeDot.style.display = 'flex';
-      btnStop.style.display = '';
-      running = true;
-
-      lookSec = 0; totalSec = 0; distCount = 0; wasLook = true;
-      statsIv = setInterval(function() {
-        totalSec++;
-        if (document.body.classList.contains('looking')) lookSec++;
-        updStats();
-      }, 1000);
-
-      // Ensure AudioContext created on gesture (mobile)
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      detectLoop();
-    } catch(e) {
-      spin.style.display = 'none';
-      msgTxt.innerHTML = 'Не удалось запустить';
-      errBox.style.display = 'block';
-      errBox.textContent = e.message || 'Неизвестная ошибка';
-      btnStart.style.display = '';
-    }
-  }
-
-  /* ─── Stop ─── */
-  function stopTracking() {
-    running = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    clearInterval(statsIv);
-    var s = vid.srcObject;
-    if (s) s.getTracks().forEach(function(t) { t.stop(); });
-    vid.srcObject = null;
-    c.clearRect(0, 0, cvs.width, cvs.height);
-    gazeDot.style.display = 'none';
-    msgOv.classList.remove('hidden');
-    spin.style.display = 'none';
-    msgTxt.innerHTML = 'Нажмите «Начать»<br>для запуска камеры';
-    btnStop.style.display = 'none';
-    btnStart.style.display = '';
-    document.body.className = '';
-    badge.textContent = 'ОЖИДАНИЕ';
-  }
-
-  /* ─── Detection loop ─── */
-  function detectLoop() {
-    if (!running) return;
-    rafId = requestAnimationFrame(detectLoop);
-
-    var now = performance.now();
-    if (now - lastT < 100) return;
-    lastT = now;
-    if (!faceLM || vid.readyState < 2) return;
-
-    var res = faceLM.detectForVideo(vid, now);
-    c.clearRect(0, 0, cvs.width, cvs.height);
-
-    if (res.faceLandmarks && res.faceLandmarks.length > 0) {
-      var lm = res.faceLandmarks[0];
-
-      // Subtle dots on key landmarks
-      var keyIdx = [33,133,159,145, 362,263,386,374, 1,4,5,6,168];
-      c.fillStyle = 'rgba(0,230,118,0.35)';
-      for (var k = 0; k < keyIdx.length; k++) {
-        var p = lm[keyIdx[k]];
-        c.beginPath();
-        c.arc(p.x * cvs.width, p.y * cvs.height, 2.5, 0, Math.PI * 2);
-        c.fill();
-      }
-
-      // Head pose from landmarks
-      var sens = parseInt(sensEl.value);
-      var nose = lm[4];
-      var lEye = lm[33];
-      var rEye = lm[263];
-      var fcx = (lEye.x + rEye.x) / 2;
-      var fcy = (lEye.y + rEye.y) / 2;
-      var fw  = Math.abs(rEye.x - lEye.x);
-
-      var hDev = Math.abs(nose.x - fcx) / fw;
-      var vDev = (nose.y - fcy) / fw;
-
-      // Blendshape gaze
-      var gazeOK = true;
-      if (res.faceBlendshapes && res.faceBlendshapes.length > 0) {
-        var bs = res.faceBlendshapes[0].categories;
-        function g(n) {
-          for (var i = 0; i < bs.length; i++) {
-            if (bs[i].categoryName === n) return bs[i].score;
-          }
-          return 0;
-        }
-
-        var blinkL = g('eyeBlinkLeft'),  blinkR = g('eyeBlinkRight');
-        var outL   = g('eyeLookOutLeft'), outR  = g('eyeLookOutRight');
-        var upL    = g('eyeLookUpLeft'),  upR   = g('eyeLookUpRight');
-        var dnL    = g('eyeLookDownLeft'),dnR   = g('eyeLookDownRight');
-
-        var blinkTh = 0.55;
-        var outTh   = 0.3  + (5 - sens) * 0.02;
-        var upTh    = 0.4  + (5 - sens) * 0.02;
-        var dnTh    = 0.5  + (5 - sens) * 0.02;
-
-        if (blinkL > blinkTh && blinkR > blinkTh) gazeOK = false;
-        if ((outL + outR) / 2 > outTh) gazeOK = false;
-        if ((upL + upR) / 2 > upTh) gazeOK = false;
-        if ((dnL + dnR) / 2 > dnTh) gazeOK = false;
-      }
-
-      var hTh = 0.38 - (sens - 5) * 0.025;
-      var vLo = -0.1 - (sens - 5) * 0.01;
-      var vHi = 0.6  + (sens - 5) * 0.03;
-
-      var facing = hDev < hTh && vDev > vLo && vDev < vHi && gazeOK;
-      setGaze(facing);
-    } else {
-      setGaze(false);
-    }
-  }
-
-  /* ─── Gaze state ─── */
-  function setGaze(looking) {
-    if (looking) {
-      document.body.className = 'looking';
-      badge.textContent = 'СМОТРИТ';
-      gazeDot.textContent = '👁\uFE0F';
-      wasLook = true; beepCD = 0;
-    } else {
-      document.body.className = 'away';
-      badge.textContent = 'ОТВЛЁКСЯ';
-      gazeDot.textContent = '⚠\uFE0F';
-      if (wasLook) { distCount++; wasLook = false; }
-      var now = Date.now();
-      if (now - beepCD > 900) { beep(); beepCD = now; }
-    }
-  }
-
-  /* ─── Stats ─── */
-  function updStats() {
-    var m = Math.floor(lookSec / 60), s = lookSec % 60;
-    document.getElementById('sTime').textContent = m + ':' + String(s).padStart(2, '0');
-    document.getElementById('sDist').textContent = distCount;
-    if (totalSec > 0) {
-      document.getElementById('sFocus').textContent = Math.round(lookSec / totalSec * 100) + '%';
-    }
-  }
-
-  /* ─── Sound toggle ─── */
-  function toggleSound() {
-    soundOn = !soundOn;
-    btnSound.textContent = soundOn ? '🔊 Звук' : '🔇 Тихо';
-    btnSound.classList.toggle('on', soundOn);
-  }
-
+function pushGaze(l){gazeBuf.push(l?1:0);if(gazeBuf.length>BUF)gazeBuf.shift();var s=0;for(var i=0;i<gazeBuf.length;i++)s+=gazeBuf[i];setGaze(s>=3)}
+function setGaze(looking){
+  if(looking){document.body.className='looking';bdg.textContent='СМОТРИТ';gd.textContent='👁️';wasLook=true;beepCD=0}
+  else{document.body.className='away';bdg.textContent='ОТВЛЁКСЯ';gd.textContent='⚠️';if(wasLook){distN++;wasLook=false}var now=Date.now();if(now-beepCD>900){beep();beepCD=now}}
+}
+function updStats(){var m=Math.floor(lookSec/60),s=lookSec%60;document.getElementById('sT').textContent=m+':'+String(s).padStart(2,'0');document.getElementById('sD').textContent=distN;if(totalSec>0)document.getElementById('sF').textContent=Math.round(lookSec/totalSec*100)+'%'}
+function toggleSound(){soundOn=!soundOn;sndB.textContent=soundOn?'🔊 Звук':'🔇 Тихо';sndB.classList.toggle('on',soundOn)}
 })();
 </script>
 </body>
