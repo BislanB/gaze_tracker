@@ -96,41 +96,55 @@
     <div class="st"><div class="l">Фокус</div><div class="v y" id="sF">—</div></div>
   </div>
 </main>
-<footer>Gaze Guard · BlazeFace + Pixel Iris · Данные локально</footer>
+<footer>Gaze Guard · MediaPipe FaceMesh + Iris · Данные локально</footer>
 
-<!-- ONLY blazeface — proven working -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+<script type="module">
+import vision from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs';
+const { FaceLandmarker, FilesetResolver, DrawingUtils } = vision;
 
-<script>
 (function(){
 'use strict';
 
+/* ── DOM refs ── */
 var vid=document.getElementById('vid'),cvs=document.getElementById('cvs'),c=cvs.getContext('2d');
 var ov=document.getElementById('ov'),mt=document.getElementById('mt'),sp=document.getElementById('sp');
 var gd=document.getElementById('gd'),bdg=document.getElementById('badge');
 var goB=document.getElementById('go'),noB=document.getElementById('no');
-var sndB=null,dbgB=document.getElementById('dbg'),recalB=document.getElementById('recal');
+var dbgB=document.getElementById('dbg'),recalB=document.getElementById('recal');
 var sensE=document.getElementById('sens'),svE=document.getElementById('sv');
 var volE=document.getElementById('vol'),vvE=document.getElementById('vv');
 var eb=document.getElementById('eb'),logE=document.getElementById('log'),dbgP=document.getElementById('dbgP');
 var calOv=document.getElementById('cal'),calSub=document.getElementById('calSub');
 var calCircle=document.getElementById('calCircle'),calSkip=document.getElementById('calSkip');
 
-/* Hidden canvas for pixel iris analysis */
-var eyeCvs=document.createElement('canvas');
-var eyeCtx=eyeCvs.getContext('2d',{willReadFrequently:true});
-
-/* Hidden canvas to draw video frame for pixel reading */
-var frameCvs=document.createElement('canvas');
-var frameCtx=frameCvs.getContext('2d',{willReadFrequently:true});
-
-var model=null,running=false,soundOn=true,audioCtx=null,showDebug=false;
+/* ── State ── */
+var faceLandmarker=null,running=false,audioCtx=null,showDebug=false;
 var lookSec=0,totalSec=0,distN=0,wasLook=true,beepCD=0,statsIv=null;
 var gazeBuf=[],BUF=7;
-var CAL_NEED=15,calibrating=false,calSamples=[];
-var baseline={gazeX:0.5,gazeY:0.5,noseOff:0,earRatio:1,calibrated:false};
+var CAL_NEED=20,calibrating=false,calSamples=[];
+var baseline={irisLX:0.5,irisLY:0.5,irisRX:0.5,irisRY:0.5,earRatio:1,noseOff:0,calibrated:false};
+var lastTs=-1;
 
+/* ── FaceMesh landmark indices ── */
+/* Iris centres: left eye iris = 468, right eye iris = 473 */
+var IRIS_L=468, IRIS_R=473;
+/* Left eye contour corners: inner=133, outer=33 */
+var L_EYE_IN=133, L_EYE_OUT=33, L_EYE_TOP=159, L_EYE_BOT=145;
+/* Right eye contour corners: inner=362, outer=263 */
+var R_EYE_IN=362, R_EYE_OUT=263, R_EYE_TOP=386, R_EYE_BOT=374;
+/* Ear-level points for head turn */
+var L_CHEEK=234, R_CHEEK=454;
+/* Nose tip */
+var NOSE_TIP=1;
+/* Eye midpoint approximation */
+var L_EYE_MID=468, R_EYE_MID=473;
+
+/* Left eye upper/lower lid landmarks for EAR */
+var L_LID_UP=[159,158,157,173], L_LID_DN=[145,153,154,163];
+/* Right eye upper/lower lid landmarks for EAR */
+var R_LID_UP=[386,385,384,398], R_LID_DN=[374,380,381,382];
+
+/* ── Event listeners ── */
 goB.addEventListener('click',startTracking);
 noB.addEventListener('click',stopTracking);
 recalB.addEventListener('click',startCal);
@@ -142,76 +156,118 @@ volE.addEventListener('input',function(){vvE.textContent=volE.value+'%'});
 function log(m){logE.textContent=m}
 function showErr(m){eb.textContent=m;eb.style.display='block'}
 function hideErr(){eb.style.display='none'}
-function beep(){var v=parseInt(volE.value);if(!v)return;try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='square';o.frequency.value=880;g.gain.value=v/250;o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+.18);o.stop(audioCtx.currentTime+.18)}catch(e){}}
 
-/* Lib check */
-var libN=0,libIv=setInterval(function(){
-  libN++;var ok1=typeof tf!=='undefined',ok2=typeof blazeface!=='undefined';
-  if(ok1&&ok2){clearInterval(libIv);mt.innerHTML='Нажмите «Начать»';goB.disabled=false;goB.style.opacity='1';log('Готово ✓');return}
-  mt.innerHTML='Загрузка: '+(ok1?'TF✓':'TF…')+' '+(ok2?'BF✓':'BF…');
-  if(libN>60){clearInterval(libIv);mt.innerHTML='Ошибка';showErr('Библиотеки не загрузились')}
-},500);
-
-/* ═══════════════════════════════════
-   PIXEL IRIS DETECTION
-   Crop eye area from video frame,
-   find center of darkest pixels = pupil
-   ═══════════════════════════════════ */
-function findPupil(eyeX,eyeY,fw,fh){
-  var vw=vid.videoWidth,vh=vid.videoHeight;
-  var ew=Math.round(fw*0.30);
-  var eh=Math.round(fh*0.18);
-  var ex=Math.round(eyeX-ew/2);
-  var ey=Math.round(eyeY-eh/2);
-  if(ex<0)ex=0;if(ey<0)ey=0;
-  if(ex+ew>vw)ew=vw-ex;if(ey+eh>vh)eh=vh-ey;
-  if(ew<6||eh<6)return{x:.5,y:.5,ok:false};
-
-  eyeCvs.width=ew;eyeCvs.height=eh;
-  eyeCtx.drawImage(frameCvs,ex,ey,ew,eh,0,0,ew,eh);
-  var id=eyeCtx.getImageData(0,0,ew,eh),d=id.data;
-
-  var gray=new Float32Array(ew*eh),mn=255,mx=0;
-  for(var i=0;i<gray.length;i++){
-    var v=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
-    gray[i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
-  }
-  var thr=mn+(mx-mn)*.3;
-  var sx=0,sy=0,sw=0;
-  for(var py=0;py<eh;py++)for(var px=0;px<ew;px++){
-    var val=gray[py*ew+px];
-    if(val<=thr){var w=thr-val+1;sx+=px*w;sy+=py*w;sw+=w}
-  }
-  if(sw<1)return{x:.5,y:.5,ok:false};
-  return{x:(sx/sw)/ew,y:(sy/sw)/eh,ok:true};
+function beep(){
+  var v=parseInt(volE.value);
+  if(!v)return;
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.type='square';o.frequency.value=880;g.gain.value=v/250;
+    o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+.18);
+    o.stop(audioCtx.currentTime+.18);
+  }catch(e){}
 }
 
-/* Start */
-async function startTracking(){
-  if(typeof blazeface==='undefined'){showErr('BlazeFace не загружен');return}
-  hideErr();goB.style.display='none';sp.style.display='block';mt.innerHTML='Модель…';log('BlazeFace…');
+/* ── Init MediaPipe ── */
+async function initFaceLandmarker(){
+  mt.innerHTML='Загрузка MediaPipe…';sp.style.display='block';
   try{
-    model=await blazeface.load();
-    log('Модель ✓');mt.innerHTML='Камера…';
-    var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    var filesetResolver=await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm'
+    );
+    faceLandmarker=await FaceLandmarker.createFromOptions(filesetResolver,{
+      baseOptions:{
+        modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+        delegate:'GPU'
+      },
+      outputFaceBlendshapes:true,
+      outputFacialTransformationMatrixes:false,
+      runningMode:'VIDEO',
+      numFaces:1
+    });
+    sp.style.display='none';
+    mt.innerHTML='Нажмите «Начать»';
+    goB.disabled=false;goB.style.opacity='1';
+    log('MediaPipe FaceMesh ✓');
+  }catch(e){
+    sp.style.display='none';
+    mt.innerHTML='Ошибка загрузки';
+    showErr('Не удалось загрузить MediaPipe: '+e.message);
+  }
+}
+initFaceLandmarker();
+
+/* ── Iris position relative to eye contour ── */
+function irisRelative(lm, irisIdx, innerIdx, outerIdx, topIdx, botIdx){
+  var iris=lm[irisIdx], inner=lm[innerIdx], outer=lm[outerIdx];
+  var top=lm[topIdx], bot=lm[botIdx];
+  /* Horizontal: 0=inner corner, 1=outer corner */
+  var dx=outer.x-inner.x, dy=outer.y-inner.y;
+  var len=Math.sqrt(dx*dx+dy*dy);
+  if(len<0.001)return{x:0.5,y:0.5};
+  var px=iris.x-inner.x, py=iris.y-inner.y;
+  var hPos=(px*dx+py*dy)/(len*len);
+  /* Vertical: 0=top, 1=bottom */
+  var vdx=bot.x-top.x, vdy=bot.y-top.y;
+  var vlen=Math.sqrt(vdx*vdx+vdy*vdy);
+  if(vlen<0.001)return{x:hPos,y:0.5};
+  var vpx=iris.x-top.x, vpy=iris.y-top.y;
+  var vPos=(vpx*vdx+vpy*vdy)/(vlen*vlen);
+  return{x:hPos,y:vPos};
+}
+
+/* ── Eye Aspect Ratio (EAR) for blink detection ── */
+function eyeAR(lm, upIdxs, dnIdxs, innerIdx, outerIdx){
+  var inner=lm[innerIdx], outer=lm[outerIdx];
+  var hDist=Math.hypot(outer.x-inner.x, outer.y-inner.y);
+  if(hDist<0.001)return 0.3;
+  var vSum=0;
+  for(var i=0;i<upIdxs.length;i++){
+    vSum+=Math.hypot(lm[upIdxs[i]].x-lm[dnIdxs[i]].x, lm[upIdxs[i]].y-lm[dnIdxs[i]].y);
+  }
+  return(vSum/upIdxs.length)/hDist;
+}
+
+/* ── Start tracking ── */
+async function startTracking(){
+  if(!faceLandmarker){showErr('FaceMesh не загружен');return}
+  hideErr();goB.style.display='none';sp.style.display='block';mt.innerHTML='Камера…';log('Камера…');
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
+    });
     vid.srcObject=stream;
-    await new Promise(function(res,rej){vid.onloadedmetadata=function(){vid.play().then(res).catch(rej)};setTimeout(function(){rej(new Error('Камера не ответила'))},15000)});
+    await new Promise(function(res,rej){
+      vid.onloadedmetadata=function(){vid.play().then(res).catch(rej)};
+      setTimeout(function(){rej(new Error('Камера не ответила'))},15000);
+    });
     cvs.width=vid.videoWidth;cvs.height=vid.videoHeight;
-    frameCvs.width=vid.videoWidth;frameCvs.height=vid.videoHeight;
     log('Камера '+vid.videoWidth+'x'+vid.videoHeight+' ✓');
     await new Promise(function(r){setTimeout(r,500)});
-    var test=await model.estimateFaces(vid,false);
-    log('Прогрев ✓ Лиц:'+test.length);
     ov.classList.add('h');gd.style.display='flex';noB.style.display='';recalB.style.display='';
-    running=true;lookSec=0;totalSec=0;distN=0;wasLook=true;gazeBuf=[];
+    running=true;lookSec=0;totalSec=0;distN=0;wasLook=true;gazeBuf=[];lastTs=-1;
     if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}
     loop();startCal();
-  }catch(e){sp.style.display='none';mt.innerHTML='Ошибка';showErr(e.message||String(e));goB.style.display=''}
+  }catch(e){
+    sp.style.display='none';mt.innerHTML='Ошибка';
+    showErr(e.message||String(e));goB.style.display='';
+  }
 }
 
-/* Calibration */
-function startCal(){calibrating=true;calSamples=[];baseline.calibrated=false;calOv.classList.remove('h');calCircle.setAttribute('stroke-dashoffset','251');calSub.textContent='Ожидание лица…'}
-function skipCal(){calibrating=false;baseline.calibrated=false;calOv.classList.add('h');log('Стандартные значения');startStats()}
+/* ── Calibration ── */
+function startCal(){
+  calibrating=true;calSamples=[];baseline.calibrated=false;
+  calOv.classList.remove('h');
+  calCircle.setAttribute('stroke-dashoffset','251');
+  calSub.textContent='Ожидание лица…';
+}
+function skipCal(){
+  calibrating=false;baseline.calibrated=false;
+  calOv.classList.add('h');log('Стандартные значения');startStats();
+}
 function addCal(s){
   calSamples.push(s);
   var pct=Math.min(calSamples.length/CAL_NEED,1);
@@ -223,20 +279,31 @@ function finishCal(){
   calibrating=false;calOv.classList.add('h');
   if(calSamples.length<3){baseline.calibrated=false;startStats();return}
   function med(a){var s=a.slice().sort(function(x,y){return x-y});var m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
-  baseline.gazeX=med(calSamples.map(function(s){return s.gx}));
-  baseline.gazeY=med(calSamples.map(function(s){return s.gy}));
+  baseline.irisLX=med(calSamples.map(function(s){return s.ilx}));
+  baseline.irisLY=med(calSamples.map(function(s){return s.ily}));
+  baseline.irisRX=med(calSamples.map(function(s){return s.irx}));
+  baseline.irisRY=med(calSamples.map(function(s){return s.iry}));
   baseline.noseOff=med(calSamples.map(function(s){return s.no}));
   baseline.earRatio=med(calSamples.map(function(s){return s.er}));
   baseline.calibrated=true;
-  log('Калибровка ✓ GX:'+baseline.gazeX.toFixed(2)+' GY:'+baseline.gazeY.toFixed(2));
+  log('Калибровка ✓ ILX:'+baseline.irisLX.toFixed(3)+' IRX:'+baseline.irisRX.toFixed(3));
   startStats();
 }
-function startStats(){if(statsIv)clearInterval(statsIv);statsIv=setInterval(function(){totalSec++;if(document.body.classList.contains('looking'))lookSec++;updStats()},1000)}
+function startStats(){
+  if(statsIv)clearInterval(statsIv);
+  statsIv=setInterval(function(){
+    totalSec++;
+    if(document.body.classList.contains('looking'))lookSec++;
+    updStats();
+  },1000);
+}
 
-/* Stop */
+/* ── Stop ── */
 function stopTracking(){
-  running=false;calibrating=false;if(statsIv){clearInterval(statsIv);statsIv=null}
-  var s=vid.srcObject;if(s)s.getTracks().forEach(function(t){t.stop()});vid.srcObject=null;
+  running=false;calibrating=false;
+  if(statsIv){clearInterval(statsIv);statsIv=null}
+  var s=vid.srcObject;if(s)s.getTracks().forEach(function(t){t.stop()});
+  vid.srcObject=null;
   c.clearRect(0,0,cvs.width,cvs.height);gd.style.display='none';calOv.classList.add('h');
   ov.classList.remove('h');sp.style.display='none';mt.innerHTML='Нажмите «Начать»';
   noB.style.display='none';recalB.style.display='none';goB.style.display='';
@@ -244,116 +311,186 @@ function stopTracking(){
 }
 
 /* ═══ MAIN LOOP ═══ */
-async function loop(){
+function loop(){
   if(!running)return;
-  try{await detect()}catch(e){}
-  if(running)setTimeout(loop,100);
+  detect();
+  requestAnimationFrame(loop);
 }
 
-async function detect(){
-  if(!model||vid.readyState<2)return;
+function detect(){
+  if(!faceLandmarker||vid.readyState<2)return;
 
-  /* Draw current video frame to hidden canvas (for pixel reading) */
-  frameCtx.drawImage(vid,0,0);
+  var now=performance.now();
+  if(now-lastTs<80)return; /* ~12 fps max to save CPU */
 
-  var faces=await model.estimateFaces(vid,false);
+  var results=faceLandmarker.detectForVideo(vid, now);
+  lastTs=now;
   c.clearRect(0,0,cvs.width,cvs.height);
 
-  if(!faces||faces.length===0){
+  if(!results.faceLandmarks||results.faceLandmarks.length===0){
     if(calibrating)calSub.textContent='Лицо не найдено…';
     else pushGaze(false);
     return;
   }
 
-  var face=faces[0];
-  var prob=face.probability;prob=prob&&prob.length?prob[0]:(typeof prob==='number'?prob:0);
-  var lm=face.landmarks;
-  function pt(i){var p=lm[i];return(p&&p.arraySync)?p.arraySync():p}
-  var rightEye=pt(0),leftEye=pt(1),nose=pt(2),mouth=pt(3),rightEar=pt(4),leftEar=pt(5);
-  var tl=face.topLeft;tl=(tl&&tl.arraySync)?tl.arraySync():tl;
-  var br=face.bottomRight;br=(br&&br.arraySync)?br.arraySync():br;
-  var fx=tl[0],fy=tl[1],fw=br[0]-tl[0],fh=br[1]-tl[1];
-  var vw=cvs.width,vh=cvs.height;
+  var lm=results.faceLandmarks[0];
+  var vw=cvs.width, vh=cvs.height;
 
-  /* Draw */
-  c.strokeStyle='rgba(0,230,118,0.15)';c.lineWidth=1.5;c.strokeRect(fx,fy,fw,fh);
-  c.fillStyle='rgba(0,230,118,0.4)';
-  [rightEye,leftEye,nose,mouth,rightEar,leftEar].forEach(function(p){if(p){c.beginPath();c.arc(p[0],p[1],3,0,Math.PI*2);c.fill()}});
+  /* ── Draw face mesh (subtle) ── */
+  c.fillStyle='rgba(0,230,118,0.25)';
+  var keyPts=[IRIS_L,IRIS_R,NOSE_TIP,L_EYE_IN,L_EYE_OUT,R_EYE_IN,R_EYE_OUT,L_EYE_TOP,L_EYE_BOT,R_EYE_TOP,R_EYE_BOT];
+  keyPts.forEach(function(i){
+    if(lm[i]){c.beginPath();c.arc(lm[i].x*vw,lm[i].y*vh,2,0,Math.PI*2);c.fill()}
+  });
 
-  /* Head features */
-  var eyeMX=(leftEye[0]+rightEye[0])/2;
-  var noseOff=(nose[0]-eyeMX)/fw;
-  var dL=Math.hypot(leftEye[0]-leftEar[0],leftEye[1]-leftEar[1]);
-  var dR=Math.hypot(rightEye[0]-rightEar[0],rightEye[1]-rightEar[1]);
+  /* ── Draw eye contours ── */
+  var leftEyeIdxs=[33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246];
+  var rightEyeIdxs=[263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,466];
+  c.strokeStyle='rgba(0,229,255,0.3)';c.lineWidth=1;
+  [leftEyeIdxs,rightEyeIdxs].forEach(function(idxs){
+    c.beginPath();
+    idxs.forEach(function(idx,j){
+      var p=lm[idx];
+      if(j===0)c.moveTo(p.x*vw,p.y*vh);
+      else c.lineTo(p.x*vw,p.y*vh);
+    });
+    c.closePath();c.stroke();
+  });
+
+  /* ── Draw iris circles ── */
+  c.fillStyle='rgba(0,229,255,0.6)';
+  [IRIS_L,IRIS_R].forEach(function(idx){
+    var p=lm[idx];
+    c.beginPath();c.arc(p.x*vw,p.y*vh,4,0,Math.PI*2);c.fill();
+  });
+
+  /* ── Iris relative positions ── */
+  var irisL=irisRelative(lm, IRIS_L, L_EYE_IN, L_EYE_OUT, L_EYE_TOP, L_EYE_BOT);
+  var irisR=irisRelative(lm, IRIS_R, R_EYE_IN, R_EYE_OUT, R_EYE_TOP, R_EYE_BOT);
+
+  /* ── EAR (Eye Aspect Ratio) — blink detection ── */
+  var earL=eyeAR(lm, L_LID_UP, L_LID_DN, L_EYE_IN, L_EYE_OUT);
+  var earR=eyeAR(lm, R_LID_UP, R_LID_DN, R_EYE_IN, R_EYE_OUT);
+  var ear=(earL+earR)/2;
+  var eyesClosed=ear<0.16;
+
+  /* ── Head pose features (secondary) ── */
+  var noseTip=lm[NOSE_TIP];
+  var eyeMidX=(lm[IRIS_L].x+lm[IRIS_R].x)/2;
+  var noseOff=noseTip.x-eyeMidX;
+
+  var lCheek=lm[L_CHEEK], rCheek=lm[R_CHEEK];
+  var dL=Math.hypot(lm[IRIS_L].x-lCheek.x, lm[IRIS_L].y-lCheek.y);
+  var dR=Math.hypot(lm[IRIS_R].x-rCheek.x, lm[IRIS_R].y-rCheek.y);
   var earRatio=Math.min(dL,dR)/(Math.max(dL,dR)+.001);
-  var faceCX=(fx+fw/2)/vw,faceCY=(fy+fh/2)/vh;
-  var offFrame=Math.max(Math.abs(faceCX-.5),Math.abs(faceCY-.5));
-  var faceArea=(fw*fh)/(vw*vh);
 
-  /* Pixel iris */
-  var gL=findPupil(leftEye[0],leftEye[1],fw,fh);
-  var gR=findPupil(rightEye[0],rightEye[1],fw,fh);
-  var gazeX=.5,gazeY=.5,gazeOK=false;
-  if(gL.ok&&gR.ok){gazeX=(gL.x+gR.x)/2;gazeY=(gL.y+gR.y)/2;gazeOK=true}
-  else if(gL.ok){gazeX=gL.x;gazeY=gL.y;gazeOK=true}
-  else if(gR.ok){gazeX=gR.x;gazeY=gR.y;gazeOK=true}
-
-  /* Draw iris dots */
-  if(gazeOK){
-    c.fillStyle='rgba(0,229,255,0.7)';
-    if(gL.ok){c.beginPath();c.arc(leftEye[0]+(gL.x-.5)*fw*.3,leftEye[1]+(gL.y-.5)*fh*.18,4,0,Math.PI*2);c.fill()}
-    if(gR.ok){c.beginPath();c.arc(rightEye[0]+(gR.x-.5)*fw*.3,rightEye[1]+(gR.y-.5)*fh*.18,4,0,Math.PI*2);c.fill()}
+  /* ── Blendshapes for extra eye signals ── */
+  var lookDown=0, lookUp=0, lookLeft=0, lookRight=0;
+  if(results.faceBlendshapes && results.faceBlendshapes.length>0){
+    var bs=results.faceBlendshapes[0].categories;
+    for(var i=0;i<bs.length;i++){
+      var name=bs[i].categoryName, score=bs[i].score;
+      if(name==='eyeLookDownLeft'||name==='eyeLookDownRight')lookDown=Math.max(lookDown,score);
+      if(name==='eyeLookUpLeft'||name==='eyeLookUpRight')lookUp=Math.max(lookUp,score);
+      if(name==='eyeLookOutLeft'||name==='eyeLookInRight')lookLeft=Math.max(lookLeft,score);
+      if(name==='eyeLookInLeft'||name==='eyeLookOutRight')lookRight=Math.max(lookRight,score);
+    }
   }
 
-  /* Calibration */
-  if(calibrating){addCal({gx:gazeX,gy:gazeY,no:noseOff,er:earRatio});return}
+  /* ── Calibration sample ── */
+  if(calibrating){
+    if(!eyesClosed){
+      addCal({ilx:irisL.x,ily:irisL.y,irx:irisR.x,iry:irisR.y,no:noseOff,er:earRatio});
+    }
+    return;
+  }
 
-  /* Scoring */
-  var bGX=baseline.calibrated?baseline.gazeX:.5;
-  var bGY=baseline.calibrated?baseline.gazeY:.5;
+  /* ── Scoring — heavy focus on iris tracking ── */
+  var bILX=baseline.calibrated?baseline.irisLX:0.5;
+  var bILY=baseline.calibrated?baseline.irisLY:0.5;
+  var bIRX=baseline.calibrated?baseline.irisRX:0.5;
+  var bIRY=baseline.calibrated?baseline.irisRY:0.5;
   var bNO=baseline.calibrated?baseline.noseOff:0;
   var bER=baseline.calibrated?baseline.earRatio:1;
 
-  var dGX=Math.abs(gazeX-bGX),dGY=Math.abs(gazeY-bGY);
-  var dNO=Math.abs(noseOff-bNO),dER=Math.abs(earRatio-bER);
+  var dILX=Math.abs(irisL.x-bILX);
+  var dILY=Math.abs(irisL.y-bILY);
+  var dIRX=Math.abs(irisR.x-bIRX);
+  var dIRY=Math.abs(irisR.y-bIRY);
+  var dNO=Math.abs(noseOff-bNO);
+  var dER=Math.abs(earRatio-bER);
 
-  var sens=parseInt(sensE.value),k=0.4+(sens-1)*0.053;
+  var sens=parseInt(sensE.value), k=0.4+(sens-1)*0.053;
 
-  var sGX=gazeOK?Math.exp(-Math.pow(dGX*k/.20,2)):.7;
-  var sGY=gazeOK?Math.exp(-Math.pow(dGY*k/.22,2)):.7;
+  /* Iris scores (primary — 60% total weight) */
+  var sILX=Math.exp(-Math.pow(dILX*k/.15,2));
+  var sILY=Math.exp(-Math.pow(dILY*k/.20,2));
+  var sIRX=Math.exp(-Math.pow(dIRX*k/.15,2));
+  var sIRY=Math.exp(-Math.pow(dIRY*k/.20,2));
+
+  /* Blendshape gaze score (15% weight) */
+  var gazeDeviation=Math.max(lookDown,lookLeft,lookRight)*0.8+lookUp*0.3;
+  var sBlend=Math.exp(-Math.pow(gazeDeviation*k/.4,2));
+
+  /* Head pose scores (secondary — 15% total weight) */
   var sNO=Math.exp(-Math.pow(dNO*k/.25,2));
   var sER=Math.exp(-Math.pow(dER*k/.35,2));
-  var sFF=offFrame<.38?1:Math.max(0,1-(offFrame-.38)/.12);
-  var sFA=faceArea>.008?1:faceArea/.008;
-  var sC=prob>.9?1:prob/.9;
 
-  var score=gazeOK
-    ?sGX*.22+sGY*.10+sNO*.22+sER*.16+sFF*.08+sFA*.05+sC*.17
-    :sNO*.30+sER*.25+sFF*.12+sFA*.08+sC*.25;
+  /* Face in frame (5%) */
+  var faceCX=(lm[NOSE_TIP].x);
+  var faceCY=(lm[NOSE_TIP].y);
+  var offFrame=Math.max(Math.abs(faceCX-.5),Math.abs(faceCY-.5));
+  var sFF=offFrame<.38?1:Math.max(0,1-(offFrame-.38)/.12);
+
+  /* Eyes closed penalty (5%) */
+  var sEye=eyesClosed?0:1;
+
+  /* Combined score — iris-dominant */
+  var score=sILX*.18+sILY*.12+sIRX*.18+sIRY*.12+sBlend*.15+sNO*.08+sER*.07+sFF*.05+sEye*.05;
 
   var thr=.35+(sens-1)*.009;
-  var looking=score>thr;
+  var looking=score>thr && !eyesClosed;
 
   if(showDebug){
     dbgP.innerHTML=
       '<b>Score:'+score.toFixed(2)+'/'+thr.toFixed(2)+'</b> '+(looking?'<span style="color:var(--green)">LOOK</span>':'<span style="color:var(--red)">AWAY</span>')+'<br>'+
-      'GX:'+gazeX.toFixed(2)+' b:'+bGX.toFixed(2)+' s:'+sGX.toFixed(2)+'<br>'+
-      'GY:'+gazeY.toFixed(2)+' b:'+bGY.toFixed(2)+' s:'+sGY.toFixed(2)+'<br>'+
-      'NO:'+noseOff.toFixed(3)+' b:'+bNO.toFixed(3)+' s:'+sNO.toFixed(2)+'<br>'+
-      'ER:'+earRatio.toFixed(2)+' b:'+bER.toFixed(2)+' s:'+sER.toFixed(2)+'<br>'+
-      'sFF:'+sFF.toFixed(2)+' sFA:'+sFA.toFixed(2)+' P:'+prob.toFixed(2)+'<br>'+
-      'Iris:'+(gazeOK?'Y':'N')+' Cal:'+(baseline.calibrated?'Y':'N');
+      'IrisL X:'+irisL.x.toFixed(3)+' b:'+bILX.toFixed(3)+' s:'+sILX.toFixed(2)+'<br>'+
+      'IrisL Y:'+irisL.y.toFixed(3)+' b:'+bILY.toFixed(3)+' s:'+sILY.toFixed(2)+'<br>'+
+      'IrisR X:'+irisR.x.toFixed(3)+' b:'+bIRX.toFixed(3)+' s:'+sIRX.toFixed(2)+'<br>'+
+      'IrisR Y:'+irisR.y.toFixed(3)+' b:'+bIRY.toFixed(3)+' s:'+sIRY.toFixed(2)+'<br>'+
+      'Blend: D:'+lookDown.toFixed(2)+' U:'+lookUp.toFixed(2)+' L:'+lookLeft.toFixed(2)+' R:'+lookRight.toFixed(2)+' s:'+sBlend.toFixed(2)+'<br>'+
+      'NO:'+noseOff.toFixed(3)+' s:'+sNO.toFixed(2)+' ER:'+earRatio.toFixed(2)+' s:'+sER.toFixed(2)+'<br>'+
+      'EAR:'+ear.toFixed(3)+' Closed:'+(eyesClosed?'Y':'N')+' Cal:'+(baseline.calibrated?'Y':'N');
   }
   pushGaze(looking);
 }
 
-function pushGaze(l){gazeBuf.push(l?1:0);if(gazeBuf.length>BUF)gazeBuf.shift();var s=0;for(var i=0;i<gazeBuf.length;i++)s+=gazeBuf[i];setGaze(s>=3)}
-function setGaze(looking){
-  if(looking){document.body.className='looking';bdg.textContent='СМОТРИТ';gd.textContent='👁️';wasLook=true;beepCD=0}
-  else{document.body.className='away';bdg.textContent='ОТВЛЁКСЯ';gd.textContent='⚠️';if(wasLook){distN++;wasLook=false}var now=Date.now();if(now-beepCD>900){beep();beepCD=now}}
+function pushGaze(l){
+  gazeBuf.push(l?1:0);
+  if(gazeBuf.length>BUF)gazeBuf.shift();
+  var s=0;for(var i=0;i<gazeBuf.length;i++)s+=gazeBuf[i];
+  setGaze(s>=3);
 }
-function updStats(){var m=Math.floor(lookSec/60),s=lookSec%60;document.getElementById('sT').textContent=m+':'+String(s).padStart(2,'0');document.getElementById('sD').textContent=distN;if(totalSec>0)document.getElementById('sF').textContent=Math.round(lookSec/totalSec*100)+'%'}
-function toggleSound(){soundOn=!soundOn;sndB.textContent=soundOn?'🔊 Звук':'🔇 Тихо';sndB.classList.toggle('on',soundOn)}
+
+function setGaze(looking){
+  if(looking){
+    document.body.className='looking';bdg.textContent='СМОТРИТ';gd.textContent='👁️';
+    wasLook=true;beepCD=0;
+  }else{
+    document.body.className='away';bdg.textContent='ОТВЛЁКСЯ';gd.textContent='⚠️';
+    if(wasLook){distN++;wasLook=false}
+    var now=Date.now();
+    if(now-beepCD>900){beep();beepCD=now}
+  }
+}
+
+function updStats(){
+  var m=Math.floor(lookSec/60),s=lookSec%60;
+  document.getElementById('sT').textContent=m+':'+String(s).padStart(2,'0');
+  document.getElementById('sD').textContent=distN;
+  if(totalSec>0)document.getElementById('sF').textContent=Math.round(lookSec/totalSec*100)+'%';
+}
+
 })();
 </script>
 </body>
