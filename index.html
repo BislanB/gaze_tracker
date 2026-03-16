@@ -99,7 +99,7 @@
 <footer>Gaze Guard · MediaPipe FaceMesh + Iris · Данные локально</footer>
 
 <script type="module">
-import { FaceLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs';
+import { FaceLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs';
 
 /* ── DOM refs ── */
 var vid=document.getElementById('vid'),cvs=document.getElementById('cvs'),c=cvs.getContext('2d');
@@ -173,7 +173,7 @@ async function initFaceLandmarker(){
   log('Загрузка WASM…');
   try{
     var filesetResolver=await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm'
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm'
     );
     log('WASM ✓ Загрузка модели…');
     /* Try GPU first, fallback to CPU */
