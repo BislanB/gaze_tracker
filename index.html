@@ -726,38 +726,92 @@ function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 
 /* ═══════════════════════════════════════
    SPEECH RECOGNITION (Web Speech API)
+   Enhanced: dedup, confidence filter,
+   restart with context preservation,
+   noise phrase filter
    ═══════════════════════════════════════ */
+var recFinalIdx=0; /* track which results we already processed */
+var recRestartCount=0;
+var REC_MAX_RESTARTS=50;
+var NOISE_PHRASES=/^(uh+|um+|hmm+|ah+|oh+|huh|mhm|okay|ok)\.?$/i;
+
 function startSpeechRecognition(){
   stopSpeechRecognition();
-  var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SpeechRecognition){log('Speech API не поддерживается');return}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){log('Speech API не поддерживается');return}
 
-  recognition=new SpeechRecognition();
+  recFinalIdx=0;
+  recRestartCount=0;
+  createRecognition(SR);
+}
+
+function createRecognition(SR){
+  recognition=new SR();
   recognition.lang='en-US';
   recognition.continuous=true;
   recognition.interimResults=true;
-  recognition.maxAlternatives=1;
+  recognition.maxAlternatives=3;
 
-  recognition.onstart=function(){speechInd.classList.add('listening')};
+  recognition.onstart=function(){
+    speechInd.classList.add('listening');
+    recFinalIdx=0;
+  };
+
   recognition.onend=function(){
     speechInd.classList.remove('listening');
-    /* Auto-restart if interview is still active */
-    if(iwActive&&iwTimeLeft>0){try{recognition.start()}catch(e){}}
+    if(!iwActive||iwTimeLeft<=0)return;
+    recRestartCount++;
+    if(recRestartCount>=REC_MAX_RESTARTS)return;
+    /* Restart with small delay to avoid rapid cycling */
+    setTimeout(function(){
+      if(!iwActive||iwTimeLeft<=0)return;
+      try{
+        createRecognition(SR);
+        recognition.start();
+      }catch(e){}
+    },300);
   };
+
   recognition.onerror=function(e){
     if(e.error==='no-speech'||e.error==='aborted')return;
-    log('Speech error: '+e.error);
-  };
-  recognition.onresult=function(e){
-    var final='',interim='';
-    for(var i=0;i<e.results.length;i++){
-      var t=e.results[i][0].transcript;
-      if(e.results[i].isFinal)final+=t+' ';
-      else interim=t;
+    if(e.error==='network'){
+      log('Speech: сеть недоступна, повтор…');
+      return; /* onend will auto-restart */
     }
-    if(final)iwCurrentTranscript+=final;
+    log('Speech: '+e.error);
+  };
+
+  recognition.onresult=function(e){
+    var newFinal='',interim='';
+
+    for(var i=recFinalIdx;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        /* Pick best alternative by confidence */
+        var best=e.results[i][0];
+        for(var a=1;a<e.results[i].length;a++){
+          if(e.results[i][a].confidence>best.confidence)best=e.results[i][a];
+        }
+        var txt=best.transcript.trim();
+        /* Skip noise filler words */
+        if(txt&&!NOISE_PHRASES.test(txt)){
+          /* Capitalize first letter of sentence */
+          txt=txt.charAt(0).toUpperCase()+txt.slice(1);
+          /* Add period if no punctuation at end */
+          if(!/[.!?]$/.test(txt))txt+='.';
+          newFinal+=txt+' ';
+        }
+        recFinalIdx=i+1;
+      }else{
+        interim=e.results[i][0].transcript;
+      }
+    }
+
+    if(newFinal)iwCurrentTranscript+=newFinal;
     iwInterimText=interim;
-    transcriptText.innerHTML=escHtml(iwCurrentTranscript)+(interim?'<span class="interim">'+escHtml(interim)+'</span>':'');
+
+    var html=escHtml(iwCurrentTranscript);
+    if(interim)html+='<span class="interim"> '+escHtml(interim)+'</span>';
+    transcriptText.innerHTML=html;
     transcriptPanel.scrollTop=transcriptPanel.scrollHeight;
   };
 
@@ -765,7 +819,10 @@ function startSpeechRecognition(){
 }
 
 function stopSpeechRecognition(){
-  if(recognition){try{recognition.stop()}catch(e){}recognition=null}
+  if(recognition){
+    try{recognition.onend=null;recognition.stop()}catch(e){}
+    recognition=null;
+  }
   speechInd.classList.remove('listening');
 }
 
