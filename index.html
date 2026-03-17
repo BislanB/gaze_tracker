@@ -3,139 +3,412 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Gaze Guard — Interview Trainer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gaze Guard — AI-Powered Interview Eye-Tracking Trainer</title>
+  <meta name="description"
+    content="Gaze Guard uses AI-powered gaze tracking to train perfect eye contact during interviews. Real-time feedback, smart calibration, and interview simulation.">
   <meta name="theme-color" content="#050508">
   <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400;1,600&display=swap"
+    rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-    :root {
-      --bg: #050508;
-      --surface: #0c0c14;
-      --surface2: #12121e;
-      --border: rgba(255, 255, 255, .06);
-      --green: #00e676;
-      --green-dim: rgba(0, 230, 118, .08);
-      --green-glow: rgba(0, 230, 118, .15);
-      --red: #ff3d5a;
-      --red-dim: rgba(255, 61, 90, .08);
-      --red-glow: rgba(255, 61, 90, .15);
-      --yellow: #ffc107;
-      --text: #e8e8f0;
-      --muted: #4a4a60;
-      --cyan: #38bdf8;
-      --accent: linear-gradient(135deg, #00e676, #38bdf8);
-      --glass: rgba(12, 12, 20, .65);
-      --glass-border: rgba(255, 255, 255, .08);
-      --radius: 16px;
-      --radius-sm: 10px;
+    /* ═══ PRELOADER ═══ */
+    .preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #050508;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      transition: opacity .6s ease, visibility .6s ease
     }
 
-    * {
+    .preloader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none
+    }
+
+    .preloader-eye {
+      width: 80px;
+      height: 80px;
+      border: 3px solid rgba(0, 230, 118, .3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: preloaderPulse 2s ease infinite;
+      position: relative
+    }
+
+    .preloader-eye::after {
+      content: '';
+      width: 24px;
+      height: 24px;
+      background: #00e676;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #00e676, 0 0 40px rgba(0, 230, 118, .3);
+      animation: preloaderDot 2s ease infinite
+    }
+
+    @keyframes preloaderPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 20px rgba(0, 230, 118, .1);
+        transform: scale(1)
+      }
+
+      50% {
+        box-shadow: 0 0 40px rgba(0, 230, 118, .3);
+        transform: scale(1.05)
+      }
+    }
+
+    @keyframes preloaderDot {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(.7)
+      }
+    }
+
+    .preloader-text {
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      color: rgba(255, 255, 255, .5);
+      letter-spacing: 2px
+    }
+
+    @layer components {
+      .liquid-glass {
+        background: rgba(255, 255, 255, .01);
+        background-blend-mode: luminosity;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: none;
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1);
+        position: relative;
+        overflow: hidden
+      }
+
+      .liquid-glass::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        padding: 1.4px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, .45) 0%, rgba(255, 255, 255, .15) 20%, transparent 40%, transparent 60%, rgba(255, 255, 255, .15) 80%, rgba(255, 255, 255, .45) 100%);
+        border-radius: inherit;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none
+      }
+
+      .liquid-glass-strong {
+        background: rgba(255, 255, 255, .02);
+        background-blend-mode: luminosity;
+        backdrop-filter: blur(50px);
+        -webkit-backdrop-filter: blur(50px);
+        border: none;
+        box-shadow: 4px 4px 4px rgba(0, 0, 0, .05), inset 0 1px 1px rgba(255, 255, 255, .15);
+        position: relative;
+        overflow: hidden
+      }
+
+      .liquid-glass-strong::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        padding: 1.4px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, .2) 20%, transparent 40%, transparent 60%, rgba(255, 255, 255, .2) 80%, rgba(255, 255, 255, .5) 100%);
+        border-radius: inherit;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box
     }
 
+    :root {
+      --radius: 1rem;
+      --text-100: hsl(0 0% 100%);
+      --text-80: hsl(0 0% 100%/.8);
+      --text-60: hsl(0 0% 100%/.6);
+      --text-50: hsl(0 0% 100%/.5);
+      --text-30: hsl(0 0% 100%/.3);
+      --white-10: rgba(255, 255, 255, .1);
+      --white-15: rgba(255, 255, 255, .15);
+      --accent: #00e676;
+      --cyan: #38bdf8
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
+      font-family: 'Poppins', sans-serif;
+      color: var(--text-100);
+      background: #000;
+      overflow-x: hidden
+    }
+
+    .font-serif {
+      font-family: 'Source Serif 4', serif
+    }
+
+    /* ═══ VIDEO BG ═══ */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      opacity: .55
+    }
+
+    .grid-lines {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .03;
+      background-image: linear-gradient(rgba(255, 255, 255, .1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .1) 1px, transparent 1px);
+      background-size: 80px 80px
+    }
+
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(0, 230, 118, .15), rgba(56, 189, 248, .1), transparent);
+      z-index: 2;
+      animation: scanDown 8s linear infinite;
+      pointer-events: none
+    }
+
+    @keyframes scanDown {
+      0% {
+        top: -3px
+      }
+
+      100% {
+        top: 100%
+      }
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(0, 230, 118, .3);
+      border-radius: 50%;
+      animation: drift linear infinite
+    }
+
+    @keyframes drift {
+      0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0
+      }
+
+      10% {
+        opacity: 1
+      }
+
+      90% {
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(-10vh) translateX(40px);
+        opacity: 0
+      }
+    }
+
+    /* ═══ CONTENT WRAPPER ═══ */
+    .page-content {
+      position: relative;
+      z-index: 10
+    }
+
+    /* ═══ HERO SECTION ═══ */
+    .hero-container {
+      display: flex;
+      min-height: 100dvh
+    }
+
+    .left-panel {
+      width: 52%;
+      position: relative;
+      display: flex;
+      flex-direction: column
+    }
+
+    .right-panel {
+      width: 48%;
+      display: none;
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px
+    }
+
+    @media(min-width:1024px) {
+      .right-panel {
+        display: flex
+      }
+    }
+
+    @media(max-width:1023px) {
+      .left-panel {
+        width: 100%
+      }
+    }
+
+    .left-overlay {
+      position: absolute;
+      inset: 16px;
+      border-radius: 1.5rem;
+      z-index: 1
+    }
+
+    @media(min-width:1024px) {
+      .left-overlay {
+        inset: 24px
+      }
+    }
+
+    .left-content {
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      overflow-x: hidden;
-      -webkit-tap-highlight-color: transparent
+      height: 100%;
+      padding: 24px
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at 30% 20%, rgba(0, 230, 118, .03) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(56, 189, 248, .03) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0
+    @media(min-width:1024px) {
+      .left-content {
+        padding: 36px
+      }
     }
 
-    /* Header */
-    header {
-      width: 100%;
-      padding: 16px 24px;
+    /* Nav */
+    .nav {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(20px);
-      background: rgba(5, 5, 8, .8);
-      position: sticky;
-      top: 0;
-      z-index: 100
+      align-items: center
     }
 
-    .header-left {
+    .nav-logo {
       display: flex;
       align-items: center;
-      gap: 12px
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px
-    }
-
-    .logo {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--accent);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      gap: 10px;
       text-decoration: none
     }
 
-    .eye-icon {
-      width: 28px;
-      height: 28px;
-      border: 2px solid var(--muted);
+    .logo-eye {
+      width: 36px;
+      height: 36px;
+      border: 2px solid rgba(0, 230, 118, .5);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all .4s ease;
-      position: relative
+      box-shadow: 0 0 12px rgba(0, 230, 118, .15);
+      animation: pulseEye 3s ease infinite
     }
 
-    .eye-icon .pupil {
-      width: 8px;
-      height: 8px;
-      background: var(--muted);
+    @keyframes pulseEye {
+
+      0%,
+      100% {
+        box-shadow: 0 0 12px rgba(0, 230, 118, .15)
+      }
+
+      50% {
+        box-shadow: 0 0 24px rgba(0, 230, 118, .3)
+      }
+    }
+
+    .logo-eye .pupil {
+      width: 10px;
+      height: 10px;
+      background: #00e676;
       border-radius: 50%;
-      transition: all .4s ease
+      box-shadow: 0 0 8px #00e676
     }
 
-    .badge {
-      padding: 6px 16px;
-      border-radius: 24px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      border: 1px solid var(--muted);
-      color: var(--muted);
-      transition: all .4s ease;
-      white-space: nowrap;
-      backdrop-filter: blur(10px)
+    .logo-text {
+      font-weight: 600;
+      font-size: 1.4rem;
+      letter-spacing: -.03em;
+      color: var(--text-100)
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .nav-menu-btn {
+      padding: 8px 18px;
+      border-radius: 9999px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-80);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform .2s;
+      background: none;
+      border: none
+    }
+
+    .nav-menu-btn:hover {
+      transform: scale(1.05)
+    }
+
+    .nav-menu-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-80)
     }
 
     /* Lang switcher */
@@ -144,1014 +417,821 @@
     }
 
     .lang-current {
-      padding: 4px 10px;
-      border-radius: 16px;
+      padding: 6px 14px;
+      border-radius: 9999px;
       cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-80);
       display: flex;
       align-items: center;
-      gap: 5px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      transition: all .2s
+      gap: 6px;
+      background: none;
+      border: none;
+      transition: transform .2s
     }
 
     .lang-current:hover {
-      border-color: rgba(255, 255, 255, .12);
-      color: var(--text)
+      transform: scale(1.05)
     }
 
     .lang-dropdown {
       position: absolute;
-      top: calc(100% + 6px);
+      top: calc(100% + 8px);
       right: 0;
       flex-direction: column;
       gap: 2px;
-      padding: 4px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      z-index: 200;
-      min-width: 140px;
-      backdrop-filter: blur(20px)
+      padding: 6px;
+      border-radius: 12px;
+      background: rgba(12, 12, 20, .9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, .08);
+      z-index: 100;
+      min-width: 160px
     }
 
     .lang-option {
-      padding: 6px 12px;
-      border-radius: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
       border: none;
       background: none;
-      color: var(--muted);
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
+      color: var(--text-80);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
       cursor: pointer;
       text-align: left;
       transition: background .2s;
       width: 100%;
       display: flex;
       align-items: center;
-      gap: 6px
+      gap: 8px
     }
 
     .lang-option:hover {
-      background: rgba(255, 255, 255, .04)
+      background: rgba(255, 255, 255, .06)
     }
 
     .lang-option.active {
-      color: var(--green);
-      background: var(--green-dim)
+      color: var(--accent);
+      background: rgba(0, 230, 118, .06)
     }
 
-    body.looking .eye-icon {
-      border-color: var(--green);
-      box-shadow: 0 0 12px var(--green-glow)
-    }
-
-    body.looking .eye-icon .pupil {
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green)
-    }
-
-    body.looking .badge {
-      border-color: var(--green);
-      color: var(--green);
-      background: var(--green-dim);
-      box-shadow: 0 0 20px var(--green-glow)
-    }
-
-    body.away .eye-icon {
-      border-color: var(--red);
-      box-shadow: 0 0 12px var(--red-glow)
-    }
-
-    body.away .eye-icon .pupil {
-      background: var(--red);
-      box-shadow: 0 0 8px var(--red)
-    }
-
-    body.away .badge {
-      border-color: var(--red);
-      color: var(--red);
-      background: var(--red-dim);
-      box-shadow: 0 0 20px var(--red-glow);
-      animation: pulse-badge 1.5s ease infinite
-    }
-
-    @keyframes pulse-badge {
-      50% {
-        box-shadow: 0 0 30px var(--red-glow)
-      }
-    }
-
-    /* Main */
-    main {
+    /* Hero center */
+    .hero-center {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 16px;
-      gap: 20px;
-      width: 100%;
-      max-width: 720px;
-      position: relative;
-      z-index: 1
-    }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      width: 100%;
-      padding: 4px;
-      background: var(--surface);
-      border-radius: 14px;
-      border: 1px solid var(--border)
-    }
-
-    .tab {
-      flex: 1;
-      padding: 12px;
-      text-align: center;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .5px;
-      text-transform: uppercase;
-      cursor: pointer;
-      background: transparent;
-      color: var(--muted);
-      border: none;
-      font-family: inherit;
-      border-radius: var(--radius-sm);
-      transition: all .3s ease
-    }
-
-    .tab:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, .03)
-    }
-
-    .tab.active {
-      background: var(--accent);
-      color: #050508;
-      box-shadow: 0 4px 15px var(--green-glow)
-    }
-
-    .tab-content {
-      display: none;
-      width: 100%
-    }
-
-    .tab-content.active {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      width: 100%;
-      animation: fadeUp .3s ease
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(8px)
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0)
-      }
-    }
-
-    /* Video wrapper */
-    .vw {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 4/3;
-      border-radius: var(--radius);
-      overflow: hidden;
-      border: 2px solid var(--border);
-      background: var(--surface);
-      transition: all .4s ease;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .4)
-    }
-
-    body.looking .vw {
-      border-color: rgba(0, 230, 118, .3);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .4), 0 0 40px var(--green-glow), inset 0 0 30px var(--green-dim)
-    }
-
-    body.away .vw {
-      border-color: rgba(255, 61, 90, .3);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .4), 0 0 40px var(--red-glow), inset 0 0 30px var(--red-dim);
-      animation: pulse-border 1.5s ease infinite
-    }
-
-    @keyframes pulse-border {
-      50% {
-        box-shadow: 0 8px 32px rgba(0, 0, 0, .4), 0 0 60px var(--red-glow), inset 0 0 40px rgba(255, 61, 90, .12)
-      }
-    }
-
-    video,
-    .vw canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover
-    }
-
-    video {
-      transform: scaleX(-1)
-    }
-
-    .vw canvas {
-      transform: scaleX(-1);
-      pointer-events: none
-    }
-
-    /* Overlay */
-    .ov {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 24px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.7;
-      z-index: 2;
-      background: var(--surface);
-      transition: opacity .4s ease
+      gap: 28px;
+      padding: 20px 0
     }
 
-    .ov.h {
-      opacity: 0;
-      pointer-events: none
-    }
-
-    .sp {
-      width: 36px;
-      height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--green);
+    .hero-eye-img {
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin-bottom: 14px;
-      display: none
+      object-fit: cover;
+      box-shadow: 0 0 40px rgba(0, 230, 118, .15), 0 0 80px rgba(56, 189, 248, .08);
+      animation: floatImg 6s ease-in-out infinite
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg)
-      }
-    }
-
-    /* Gaze dot */
-    .gd {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      background: var(--glass);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      z-index: 3;
-      transition: all .3s ease
-    }
-
-    body.looking .gd {
-      border-color: rgba(0, 230, 118, .3);
-      box-shadow: 0 0 16px var(--green-glow)
-    }
-
-    body.away .gd {
-      border-color: rgba(255, 61, 90, .3);
-      box-shadow: 0 0 16px var(--red-glow);
-      animation: shake .4s infinite
-    }
-
-    @keyframes shake {
-      25% {
-        transform: translateX(-2px)
-      }
-
-      75% {
-        transform: translateX(2px)
-      }
-    }
-
-    /* Calibration */
-    .cal {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 5;
-      background: rgba(5, 5, 8, .88);
-      backdrop-filter: blur(16px);
-      text-align: center;
-      transition: opacity .4s ease
-    }
-
-    .cal.h {
-      opacity: 0;
-      pointer-events: none
-    }
-
-    .cal .ring {
-      width: 88px;
-      height: 88px;
-      border: 3px solid var(--cyan);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 18px;
-      position: relative;
-      box-shadow: 0 0 24px rgba(56, 189, 248, .1)
-    }
-
-    .cal .ring svg {
-      position: absolute;
-      top: -3px;
-      left: -3px;
-      width: 94px;
-      height: 94px;
-      transform: rotate(-90deg)
-    }
-
-    .cal .ring svg circle {
-      fill: none;
-      stroke: var(--green);
-      stroke-width: 3;
-      stroke-linecap: round;
-      transition: stroke-dashoffset .15s
-    }
-
-    .cal .ring .dot {
-      width: 14px;
-      height: 14px;
-      background: var(--cyan);
-      border-radius: 50%;
-      box-shadow: 0 0 12px var(--cyan)
-    }
-
-    .cal .txt {
-      font-size: 15px;
-      color: var(--cyan);
-      margin-bottom: 8px;
-      font-weight: 600
-    }
-
-    .cal .sub {
-      font-size: 12px;
-      color: var(--muted);
-      max-width: 280px;
-      line-height: 1.6
-    }
-
-    .cal .skip-btn {
-      margin-top: 16px;
-      padding: 10px 20px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--glass);
-      backdrop-filter: blur(10px);
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all .2s ease
-    }
-
-    .cal .skip-btn:hover {
-      border-color: var(--cyan);
-      color: var(--cyan)
-    }
-
-    /* Debug */
-    .dbg-panel {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 9px;
-      color: var(--cyan);
-      z-index: 4;
-      background: var(--glass);
-      backdrop-filter: blur(12px);
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--glass-border);
-      pointer-events: none;
-      display: none;
-      line-height: 1.7;
-      max-width: 280px;
-      font-family: 'JetBrains Mono', monospace
-    }
-
-    /* Question overlay */
-    .q-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 4;
-      padding: 14px 16px;
-      background: linear-gradient(180deg, rgba(5, 5, 8, .94) 0%, rgba(5, 5, 8, .75) 85%, transparent 100%);
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      backdrop-filter: blur(8px)
-    }
-
-    .q-overlay.active {
-      display: flex;
-      animation: fadeUp .3s ease
-    }
-
-    .q-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center
-    }
-
-    .q-num {
-      font-size: 10px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      font-weight: 600
-    }
-
-    .q-timer {
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--yellow);
-      min-width: 44px;
-      text-align: right;
-      font-variant-numeric: tabular-nums
-    }
-
-    .q-timer.urgent {
-      color: var(--red);
-      animation: pulse-badge 1s infinite
-    }
-
-    .q-text {
-      font-size: 14px;
-      color: var(--text);
-      line-height: 1.6;
-      max-height: 64px;
-      overflow-y: auto;
-      font-weight: 500
-    }
-
-    .q-timer-bar {
-      height: 3px;
-      background: rgba(255, 255, 255, .06);
-      border-radius: 3px;
-      overflow: hidden
-    }
-
-    .q-timer-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--yellow), var(--green));
-      transition: width 1s linear;
-      border-radius: 3px
-    }
-
-    .q-timer-fill.urgent {
-      background: linear-gradient(90deg, var(--red), #ff6b3d)
-    }
-
-    /* Speech indicator */
-    .speech-indicator {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      z-index: 4;
-      display: none;
-      align-items: center;
-      gap: 7px;
-      padding: 8px 14px;
-      background: var(--glass);
-      backdrop-filter: blur(12px);
-      border-radius: 24px;
-      border: 1px solid var(--glass-border);
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 1px
-    }
-
-    .speech-indicator.listening {
-      display: flex;
-      border-color: rgba(0, 230, 118, .3);
-      color: var(--green)
-    }
-
-    .speech-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-      animation: pulse-dot 1.2s infinite
-    }
-
-    @keyframes pulse-dot {
+    @keyframes floatImg {
 
       0%,
       100% {
-        opacity: 1;
-        transform: scale(1)
+        transform: translateY(0)
       }
 
       50% {
-        opacity: .3;
-        transform: scale(.6)
+        transform: translateY(-8px)
       }
     }
 
-    /* Buttons */
-    .ctrls {
+    .hero-title {
+      font-size: clamp(2.8rem, 6vw, 4.5rem);
+      font-weight: 500;
+      line-height: 1.08;
+      letter-spacing: -.05em;
+      color: var(--text-100)
+    }
+
+    .hero-title em {
+      font-family: 'Source Serif 4', serif;
+      font-style: italic;
+      color: var(--text-80)
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 32px;
+      border-radius: 9999px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-100);
+      transition: transform .2s;
+      text-decoration: none;
+      border: none
+    }
+
+    .cta-btn:hover {
+      transform: scale(1.05)
+    }
+
+    .cta-btn:active {
+      transform: scale(.95)
+    }
+
+    .cta-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--white-15);
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .cta-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--text-100);
+      fill: none
+    }
+
+    .feature-pills {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       justify-content: center
     }
 
-    button {
-      font-family: inherit;
-      padding: 12px 24px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s ease;
-      -webkit-user-select: none;
-      user-select: none;
-      position: relative;
-      overflow: hidden
-    }
-
-    button:hover {
-      border-color: rgba(255, 255, 255, .12);
-      background: rgba(255, 255, 255, .04);
-      transform: translateY(-1px)
-    }
-
-    button:active {
-      transform: scale(.97) translateY(0)
-    }
-
-    button.on {
-      background: var(--green);
-      color: var(--bg);
-      border-color: var(--green);
-      box-shadow: 0 4px 16px var(--green-glow)
-    }
-
-    button:disabled {
-      opacity: .35;
-      cursor: default;
-      transform: none
-    }
-
-    button.primary {
-      background: var(--accent);
-      color: var(--bg);
-      border: none;
-      font-weight: 700;
-      box-shadow: 0 4px 16px var(--green-glow)
-    }
-
-    button.primary:hover {
-      box-shadow: 0 6px 24px var(--green-glow);
-      transform: translateY(-2px)
-    }
-
-    button.ghost {
-      background: transparent;
-      border: 1px solid var(--border)
-    }
-
-    /* Sliders */
-    .sr {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 18px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      width: 100%;
-      transition: border-color .2s
-    }
-
-    .sr:hover {
-      border-color: rgba(255, 255, 255, .1)
-    }
-
-    .sr label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      white-space: nowrap;
-      font-weight: 600
-    }
-
-    input[type=range] {
-      flex: 1;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 4px;
-      background: rgba(255, 255, 255, .06);
-      border-radius: 4px;
-      outline: none
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--green);
-      cursor: pointer;
-      box-shadow: 0 0 10px var(--green-glow);
-      transition: transform .15s
-    }
-
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.15)
-    }
-
-    .svl {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--green);
-      min-width: 28px;
-      text-align: right;
-      font-variant-numeric: tabular-nums
-    }
-
-    /* Stats */
-    .sts {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      width: 100%
-    }
-
-    .st {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 8px;
-      text-align: center;
-      transition: all .3s ease
-    }
-
-    .st:hover {
-      border-color: rgba(255, 255, 255, .1);
-      transform: translateY(-1px)
-    }
-
-    .st .l {
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 6px;
-      font-weight: 600
-    }
-
-    .st .v {
-      font-size: 24px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums
-    }
-
-    .st .v.g {
-      color: var(--green)
-    }
-
-    .st .v.r {
-      color: var(--red)
-    }
-
-    .st .v.y {
-      color: var(--yellow)
-    }
-
-    /* Error */
-    .eb {
-      background: var(--red-dim);
-      border: 1px solid rgba(255, 61, 90, .2);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      font-size: 12px;
-      color: var(--red);
-      line-height: 1.6;
-      width: 100%;
-      display: none;
-      word-break: break-word;
-      backdrop-filter: blur(8px)
-    }
-
-    .log {
+    .pill {
+      padding: 8px 18px;
+      border-radius: 9999px;
       font-size: 11px;
-      color: var(--muted);
-      text-align: center;
-      min-height: 16px;
-      line-height: 1.4
+      font-weight: 500;
+      color: var(--text-80);
+      letter-spacing: .02em;
+      transition: transform .2s;
+      cursor: default
     }
 
-    /* Interview setup */
-    .iw-setup {
-      width: 100%;
+    .pill:hover {
+      transform: scale(1.05)
+    }
+
+    /* Bottom */
+    .bottom-section {
       display: flex;
       flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px
+    }
+
+    .bottom-label {
+      font-size: 10px;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: var(--text-50);
+      font-weight: 500
+    }
+
+    .bottom-quote {
+      font-size: 15px;
+      color: var(--text-80);
+      line-height: 1.6;
+      max-width: 380px;
+      text-align: center
+    }
+
+    .bottom-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--text-50);
+      font-weight: 500
+    }
+
+    .bottom-author::before,
+    .bottom-author::after {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: var(--text-30)
+    }
+
+    /* Right panel */
+    .right-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .social-bar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 8px;
+      border-radius: 9999px
+    }
+
+    .social-link {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--white-10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-100);
+      text-decoration: none;
+      transition: color .2s, transform .2s
+    }
+
+    .social-link:hover {
+      color: var(--text-80);
+      transform: scale(1.05)
+    }
+
+    .social-link svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none
+    }
+
+    .account-btn {
+      padding: 10px 18px;
+      border-radius: 9999px;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-80);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform .2s;
+      border: none;
+      background: none
+    }
+
+    .account-btn:hover {
+      transform: scale(1.05)
+    }
+
+    .account-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none
+    }
+
+    .community-card {
+      width: 280px;
+      padding: 20px;
+      border-radius: 1.2rem;
+      margin-top: 8px
+    }
+
+    .community-card h3 {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-100);
+      margin-bottom: 6px
+    }
+
+    .community-card p {
+      font-size: 12px;
+      color: var(--text-60);
+      line-height: 1.6
+    }
+
+    .features-outer {
+      margin-top: auto;
+      padding: 20px;
+      border-radius: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .features-row {
+      display: flex;
+      gap: 12px
+    }
+
+    .feature-card {
+      flex: 1;
+      padding: 20px;
+      border-radius: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .feature-card .icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--white-10);
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .feature-card .icon-wrap svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-80);
+      fill: none
+    }
+
+    .feature-card h4 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-100)
+    }
+
+    .feature-card p {
+      font-size: 11px;
+      color: var(--text-60);
+      line-height: 1.5
+    }
+
+    .feature-wide {
+      padding: 16px 20px;
+      border-radius: 1.5rem;
+      display: flex;
+      align-items: center;
       gap: 16px
     }
 
-    .iw-setup h2 {
+    .feature-wide-img {
+      width: 96px;
+      height: 64px;
+      border-radius: 12px;
+      object-fit: cover;
+      flex-shrink: 0
+    }
+
+    .feature-wide-text h4 {
       font-size: 14px;
-      color: var(--text);
-      letter-spacing: .5px;
-      font-weight: 700;
+      font-weight: 500;
+      color: var(--text-100);
+      margin-bottom: 4px
+    }
+
+    .feature-wide-text p {
+      font-size: 11px;
+      color: var(--text-60);
+      line-height: 1.5
+    }
+
+    .add-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 8px
+      justify-content: center;
+      margin-left: auto;
+      flex-shrink: 0;
+      cursor: pointer;
+      font-size: 20px;
+      color: var(--text-80);
+      transition: transform .2s;
+      border: none;
+      background: none
     }
 
-    .iw-setup h2::before {
-      content: '';
-      width: 3px;
-      height: 18px;
-      background: var(--accent);
-      border-radius: 2px
+    .add-btn:hover {
+      transform: scale(1.1)
     }
 
-    .iw-setup textarea {
-      width: 100%;
-      min-height: 180px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 13px;
-      line-height: 1.7;
-      resize: vertical;
-      outline: none;
-      transition: border-color .2s
+    /* ═══ SCROLL SECTIONS ═══ */
+    .section {
+      padding: 80px 24px;
+      max-width: 1100px;
+      margin: 0 auto
     }
 
-    .iw-setup textarea:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(56, 189, 248, .08)
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 500;
+      letter-spacing: -.03em;
+      text-align: center;
+      margin-bottom: 12px;
+      color: var(--text-100)
     }
 
-    .iw-setup textarea::placeholder {
-      color: var(--muted)
+    .section-subtitle {
+      font-size: 14px;
+      color: var(--text-50);
+      text-align: center;
+      max-width: 500px;
+      margin: 0 auto 48px
     }
 
-    .iw-row {
+    /* How It Works */
+    .hiw-steps {
       display: flex;
-      gap: 14px;
-      align-items: center;
+      gap: 24px;
+      justify-content: center;
       flex-wrap: wrap
     }
 
-    .iw-row label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      white-space: nowrap;
-      font-weight: 600
-    }
-
-    .iw-row input[type=number] {
-      width: 80px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 14px;
+    .hiw-step {
+      flex: 1;
+      min-width: 240px;
+      max-width: 320px;
+      padding: 32px 24px;
+      border-radius: 1.5rem;
       text-align: center;
-      outline: none;
-      font-weight: 600;
-      transition: border-color .2s
-    }
-
-    .iw-row input[type=number]:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(56, 189, 248, .08)
-    }
-
-    .iw-row select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 13px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color .2s
-    }
-
-    .iw-row select:focus {
-      border-color: var(--cyan)
-    }
-
-    .iw-hint {
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.6;
-      padding: 12px 16px;
-      background: var(--surface);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border)
-    }
-
-    /* Transcript */
-    .transcript-panel {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      max-height: 220px;
-      overflow-y: auto;
-      display: none;
-      transition: all .3s
-    }
-
-    .transcript-panel.active {
-      display: block;
-      animation: fadeUp .3s ease
-    }
-
-    .transcript-panel h3 {
-      font-size: 10px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-      font-weight: 700;
       display: flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .transcript-panel h3::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 8px var(--cyan)
-    }
-
-    .transcript-text {
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.7;
-      white-space: pre-wrap;
-      word-break: break-word
-    }
-
-    .transcript-text .interim {
-      color: var(--muted);
-      font-style: italic;
-      opacity: .7
-    }
-
-    /* Results */
-    .results-panel {
-      width: 100%;
-      display: none;
       flex-direction: column;
-      gap: 16px
+      align-items: center;
+      gap: 16px;
+      transition: transform .3s
     }
 
-    .results-panel.active {
-      display: flex;
-      animation: fadeUp .4s ease
+    .hiw-step:hover {
+      transform: translateY(-4px)
     }
 
-    .results-panel h2 {
-      font-size: 14px;
-      color: var(--text);
-      font-weight: 700;
+    .hiw-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 230, 118, .15), rgba(56, 189, 248, .15));
       display: flex;
       align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent)
+    }
+
+    .hiw-step h3 {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-100)
+    }
+
+    .hiw-step p {
+      font-size: 12px;
+      color: var(--text-60);
+      line-height: 1.7
+    }
+
+    .hiw-connector {
+      display: none;
+      align-items: center;
+      color: var(--text-30);
+      font-size: 24px;
+      padding-top: 20px
+    }
+
+    @media(min-width:800px) {
+      .hiw-connector {
+        display: flex
+      }
+    }
+
+    /* Demo */
+    .demo-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px
+    }
+
+    .demo-canvas-wrap {
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      cursor: none
+    }
+
+    .demo-canvas {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    .demo-info {
+      font-size: 12px;
+      color: var(--text-50);
+      text-align: center;
+      max-width: 420px;
+      line-height: 1.7
+    }
+
+    /* FAQ */
+    .faq-list {
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
       gap: 8px
     }
 
-    .results-panel h2::before {
-      content: '';
-      width: 3px;
-      height: 18px;
-      background: var(--accent);
-      border-radius: 2px
+    .faq-item {
+      border-radius: 1rem;
+      overflow: hidden;
+      transition: transform .2s
     }
 
-    .result-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      transition: all .2s
-    }
-
-    .result-card:hover {
-      border-color: rgba(255, 255, 255, .1);
+    .faq-item:hover {
       transform: translateY(-1px)
     }
 
-    .result-card .rq {
-      font-size: 13px;
-      color: var(--cyan);
-      line-height: 1.5;
-      font-weight: 600
-    }
-
-    .result-card .ra {
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.6;
-      white-space: pre-wrap;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, .02);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border)
-    }
-
-    .result-card .ra.empty {
-      color: var(--muted);
-      font-style: italic
-    }
-
-    .result-card .rmeta {
+    .faq-q {
+      padding: 18px 24px;
+      cursor: pointer;
       display: flex;
-      gap: 14px;
-      font-size: 10px;
-      color: var(--muted);
-      font-weight: 600;
-      letter-spacing: .5px
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-100);
+      background: none;
+      border: none;
+      width: 100%;
+      font-family: 'Poppins', sans-serif;
+      text-align: left
     }
 
-    .result-card .rmeta span {
+    .faq-q svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-50);
+      flex-shrink: 0;
+      transition: transform .3s;
+      fill: none
+    }
+
+    .faq-item.open .faq-q svg {
+      transform: rotate(45deg)
+    }
+
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease, padding .3s ease
+    }
+
+    .faq-a-inner {
+      padding: 0 24px 18px;
+      font-size: 13px;
+      color: var(--text-60);
+      line-height: 1.7
+    }
+
+    .faq-item.open .faq-a {
+      max-height: 200px
+    }
+
+    /* ═══ NAV OVERLAY ═══ */
+    .nav-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, .02)
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .4s ease, visibility .4s ease
     }
 
-    footer {
-      padding: 16px;
+    .nav-overlay.open {
+      opacity: 1;
+      visibility: visible
+    }
+
+    .nav-overlay-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 5, 8, .92);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px)
+    }
+
+    .nav-overlay-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px
+    }
+
+    .nav-overlay-link {
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      font-weight: 500;
+      color: var(--text-60);
+      text-decoration: none;
+      letter-spacing: -.02em;
+      transition: color .2s, transform .2s;
+      padding: 8px 24px;
+      border-radius: 12px
+    }
+
+    .nav-overlay-link:hover {
+      color: var(--text-100);
+      transform: scale(1.05)
+    }
+
+    .nav-close {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 2;
+      border: none;
+      background: none
+    }
+
+    .nav-close svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-80);
+      fill: none
+    }
+
+    /* ═══ FOOTER ═══ */
+    .site-footer {
       text-align: center;
+      padding: 24px;
       font-size: 10px;
-      color: var(--muted);
-      border-top: 1px solid var(--border);
-      width: 100%;
-      letter-spacing: .5px
+      color: var(--text-30);
+      letter-spacing: .5px;
+      border-top: 1px solid rgba(255, 255, 255, .04)
     }
 
-    /* Scrollbar */
+    /* Stagger animations */
+    .hero-container {
+      opacity: 0;
+      animation: heroFadeIn 1.2s ease .3s forwards
+    }
+
+    @keyframes heroFadeIn {
+      to {
+        opacity: 1
+      }
+    }
+
+    .hero-center>* {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: staggerUp .8s ease forwards
+    }
+
+    .hero-center>*:nth-child(1) {
+      animation-delay: .5s
+    }
+
+    .hero-center>*:nth-child(2) {
+      animation-delay: .7s
+    }
+
+    .hero-center>*:nth-child(3) {
+      animation-delay: .9s
+    }
+
+    .hero-center>*:nth-child(4) {
+      animation-delay: 1.1s
+    }
+
+    @keyframes staggerUp {
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .bottom-section>* {
+      opacity: 0;
+      animation: staggerUp .8s ease forwards
+    }
+
+    .bottom-section>*:nth-child(1) {
+      animation-delay: 1.3s
+    }
+
+    .bottom-section>*:nth-child(2) {
+      animation-delay: 1.5s
+    }
+
+    .bottom-section>*:nth-child(3) {
+      animation-delay: 1.7s
+    }
+
+    .right-panel>* {
+      opacity: 0;
+      transform: translateX(30px);
+      animation: slideInRight .8s ease forwards
+    }
+
+    .right-panel>*:nth-child(1) {
+      animation-delay: .8s
+    }
+
+    .right-panel>*:nth-child(2) {
+      animation-delay: 1s
+    }
+
+    .right-panel>*:nth-child(3) {
+      animation-delay: 1.2s
+    }
+
+    @keyframes slideInRight {
+      to {
+        opacity: 1;
+        transform: translateX(0)
+      }
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity .6s ease, transform .6s ease
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    /* Mobile */
+    @media(max-width:640px) {
+      .left-content {
+        padding: 16px
+      }
+
+      .left-overlay {
+        inset: 10px
+      }
+
+      .hero-title {
+        font-size: 2.2rem
+      }
+
+      .hero-eye-img {
+        width: 64px;
+        height: 64px
+      }
+
+      .feature-pills {
+        gap: 6px
+      }
+
+      .pill {
+        padding: 6px 12px;
+        font-size: 10px
+      }
+
+      .bottom-quote {
+        font-size: 13px
+      }
+
+      .nav-menu-btn span {
+        display: none
+      }
+
+      .hiw-steps {
+        flex-direction: column;
+        align-items: center
+      }
+
+      .hiw-connector {
+        display: none
+      }
+    }
+
     ::-webkit-scrollbar {
       width: 4px
     }
@@ -1161,986 +1241,378 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: var(--muted);
+      background: rgba(255, 255, 255, .1);
       border-radius: 4px
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--cyan)
+    /* RTL support */
+    [dir="rtl"] .nav {
+      flex-direction: row-reverse
     }
 
-    @media(max-width:500px) {
-      header {
-        padding: 12px 14px
-      }
-
-      .logo {
-        font-size: 12px;
-        gap: 8px
-      }
-
-      .eye-icon {
-        width: 24px;
-        height: 24px
-      }
-
-      .badge {
-        font-size: 9px;
-        padding: 5px 12px
-      }
-
-      main {
-        padding: 14px 10px;
-        gap: 14px
-      }
-
-      .st .v {
-        font-size: 20px
-      }
-
-      .st .l {
-        font-size: 8px
-      }
-
-      .st {
-        padding: 12px 6px
-      }
-
-      button {
-        padding: 10px 18px;
-        font-size: 12px
-      }
-
-      .sr {
-        padding: 10px 14px;
-        gap: 10px
-      }
-
-      .gd {
-        width: 34px;
-        height: 34px;
-        font-size: 16px
-      }
-
-      .q-text {
-        font-size: 12px
-      }
-
-      .tabs {
-        gap: 2px;
-        padding: 3px
-      }
-
-      .tab {
-        padding: 10px;
-        font-size: 11px
-      }
+    [dir="rtl"] .nav-logo {
+      flex-direction: row-reverse
     }
 
-    /* Difficulty buttons */
-    .diff-container {
-      width: 100%;
-      margin-bottom: 4px
+    [dir="rtl"] .faq-q {
+      flex-direction: row-reverse;
+      text-align: right
     }
 
-    .diff-row {
-      display: flex;
-      gap: 4px
-    }
-
-    .diff-btn {
-      flex: 1;
-      padding: 8px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all .2s;
-      text-transform: uppercase;
-      letter-spacing: .5px
-    }
-
-    .diff-btn:hover {
-      border-color: rgba(255, 255, 255, .12);
-      color: var(--text)
-    }
-
-    .diff-btn.active {
-      background: var(--diff-color, var(--green));
-      color: var(--bg);
-      border-color: var(--diff-color, var(--green));
-      box-shadow: 0 2px 12px rgba(0, 0, 0, .3)
-    }
-
-    /* Dashboard */
-    .dash-empty {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-      font-size: 13px
-    }
-
-    .dash-empty-icon {
-      font-size: 40px;
-      margin-bottom: 12px
-    }
-
-    .dash-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px
-    }
-
-    .dash-chart-title,
-    .dash-recent-title {
-      font-size: 10px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      font-weight: 700;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .dash-chart-title::before,
-    .dash-recent-title::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 6px var(--cyan)
-    }
-
-    .dash-chart {
-      display: flex;
-      align-items: flex-end;
-      gap: 6px;
-      height: 120px;
-      padding: 8px 0;
-      margin-bottom: 16px
-    }
-
-    .dash-bar-wrap {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100%;
-      justify-content: flex-end;
-      gap: 4px
-    }
-
-    .dash-bar {
-      width: 100%;
-      border-radius: 4px 4px 0 0;
-      min-height: 4px;
-      position: relative;
-      transition: height .4s ease
-    }
-
-    .dash-bar-val {
-      position: absolute;
-      top: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap
-    }
-
-    .dash-bar-label {
-      font-size: 9px;
-      color: var(--muted)
-    }
-
-    .dash-session-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      margin-bottom: 4px;
-      font-size: 11px
-    }
-
-    .dash-date {
-      color: var(--muted);
-      min-width: 120px
-    }
-
-    .dash-focus {
-      font-weight: 800;
-      min-width: 40px
-    }
-
-    .dash-info {
-      color: var(--muted);
-      font-size: 10px
-    }
-
-    .dash-clear {
-      margin-top: 12px;
-      font-size: 11px;
-      width: 100%
-    }
-
-    /* Tips */
-    .tips-container {
-      width: 100%;
-      display: none;
-      flex-direction: column;
-      gap: 8px
-    }
-
-    .tips-container.active {
-      display: flex;
-      animation: fadeUp .3s ease
-    }
-
-    .tips-title {
-      font-size: 12px;
-      color: var(--cyan);
-      letter-spacing: 1px;
-      font-weight: 700;
-      margin-bottom: 4px
-    }
-
-    .tip-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 12px;
-      line-height: 1.6;
-      color: var(--text)
-    }
-
-    .tip-card.tip-success {
-      border-color: rgba(0, 230, 118, .2);
-      background: rgba(0, 230, 118, .04)
-    }
-
-    .tip-card.tip-good {
-      border-color: rgba(56, 189, 248, .2);
-      background: rgba(56, 189, 248, .04)
-    }
-
-    .tip-card.tip-tip {
-      border-color: rgba(255, 193, 7, .2);
-      background: rgba(255, 193, 7, .04)
-    }
-
-    .tip-card.tip-warning {
-      border-color: rgba(255, 61, 90, .2);
-      background: rgba(255, 61, 90, .04)
-    }
-
-    .tip-icon {
-      font-size: 16px;
-      flex-shrink: 0;
-      margin-top: 1px
-    }
-
-    .tip-card p {
-      margin: 0
-    }
-
-    /* Heatmap */
-    .heatmap-container {
-      width: 100%;
-      display: none;
-      flex-direction: column;
-      gap: 8px
-    }
-
-    .heatmap-container.active {
-      display: flex;
-      animation: fadeUp .3s ease
-    }
-
-    .heatmap-title {
-      font-size: 10px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .heatmap-title::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 6px var(--cyan)
-    }
-
-    #heatmapCanvas {
-      width: 100%;
-      border-radius: var(--radius);
-      border: 1px solid var(--border)
-    }
-
-    /* Onboarding */
-    .onb-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5, 5, 8, .7);
-      z-index: 9000;
-      transition: opacity .3s
-    }
-
-    .onb-highlight {
-      position: fixed;
-      z-index: 9001;
-      border: 2px solid var(--cyan);
-      border-radius: var(--radius);
-      box-shadow: 0 0 0 4000px rgba(5, 5, 8, .7), 0 0 20px var(--cyan);
-      transition: all .3s;
-      pointer-events: none
-    }
-
-    .onb-tooltip {
-      position: fixed;
-      z-index: 9002;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-      max-width: 320px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
-      animation: fadeUp .3s ease
-    }
-
-    .onb-step-num {
-      font-size: 10px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      font-weight: 700;
-      margin-bottom: 6px
-    }
-
-    .onb-tooltip h4 {
-      font-size: 15px;
-      color: var(--text);
-      margin-bottom: 6px;
-      font-weight: 600
-    }
-
-    .onb-tooltip p {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 14px
-    }
-
-    .onb-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end
-    }
-
-    .onb-skip {
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all .2s
-    }
-
-    .onb-skip:hover {
-      color: var(--text);
-      border-color: rgba(255, 255, 255, .12)
-    }
-
-    .onb-next {
-      padding: 8px 20px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: var(--accent);
-      color: var(--bg);
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all .2s;
-      box-shadow: 0 2px 8px var(--green-glow)
-    }
-
-    .onb-next:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px var(--green-glow)
+    [dir="rtl"] .feature-wide {
+      flex-direction: row-reverse
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="header-left">
-      <a class="logo" href="landing.html">
-        <div class="eye-icon">
-          <div class="pupil"></div>
-        </div>GAZE GUARD
-      </a>
+
+  <!-- PRELOADER -->
+  <div class="preloader" id="preloader">
+    <div class="preloader-eye"><span></span></div>
+    <div class="preloader-text" data-i18n="preloader.text">Initializing Gaze Guard...</div>
+  </div>
+
+  <!-- BG -->
+  <video id="bg-video" autoplay muted loop playsinline>
+    <source
+      src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260315_073750_51473149-4350-4920-ae24-c8214286f323.mp4"
+      type="video/mp4">
+  </video>
+  <div class="grid-lines"></div>
+  <div class="scanline"></div>
+  <div class="particles" id="particles"></div>
+
+  <!-- NAV OVERLAY -->
+  <div class="nav-overlay" id="navOverlay">
+    <div class="nav-overlay-bg"></div>
+    <button class="nav-close" id="navClose"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg></button>
+    <div class="nav-overlay-content">
+      <a href="#hero" class="nav-overlay-link" data-i18n="nav.home">Home</a>
+      <a href="#howitworks" class="nav-overlay-link" data-i18n="nav.howitworks">How It Works</a>
+      <a href="#demo" class="nav-overlay-link" data-i18n="nav.demo">Live Demo</a>
+      <a href="#faq" class="nav-overlay-link" data-i18n="nav.faq">FAQ</a>
+      <a href="index.html" class="nav-overlay-link" data-i18n="nav.launch">Launch App</a>
     </div>
-    <div class="header-right">
-      <div class="lang-switcher" id="langSwitcher"></div>
-      <div class="badge" id="badge" data-i18n="app.badge.waiting">WAITING</div>
-    </div>
-  </header>
-  <main>
-    <div class="tabs">
-      <button class="tab active" data-tab="tracker" data-i18n="app.tab.tracker">Tracker</button>
-      <button class="tab" data-tab="interview" data-i18n="app.tab.interview">Interview</button>
-      <button class="tab" data-tab="dashboard" data-i18n="app.tab.dashboard">📊 Dashboard</button>
+  </div>
+
+  <div class="page-content">
+
+    <!-- ═══ HERO ═══ -->
+    <div class="hero-container" id="hero">
+      <div class="left-panel">
+        <div class="left-overlay liquid-glass-strong"></div>
+        <div class="left-content">
+          <nav class="nav">
+            <a class="nav-logo" href="#">
+              <div class="logo-eye">
+                <div class="pupil"></div>
+              </div>
+              <span class="logo-text">gaze guard</span>
+            </a>
+            <div class="nav-right">
+              <div class="lang-switcher" id="langSwitcher"></div>
+              <button class="nav-menu-btn liquid-glass" id="menuBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+                <span data-i18n="nav.menu">Menu</span>
+              </button>
+            </div>
+          </nav>
+          <div class="hero-center">
+            <img class="hero-eye-img" src="hero-eye.png" alt="Gaze Guard AI Eye">
+            <h1 class="hero-title"><span data-i18n="hero.title.1">Master the</span><br><em data-i18n="hero.title.2">art
+                of eye</em><br><span data-i18n="hero.title.3">contact</span></h1>
+            <a href="index.html" class="cta-btn liquid-glass-strong"><span data-i18n="hero.cta">Launch
+                Trainer</span><span class="cta-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                  fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg></span></a>
+            <div class="feature-pills">
+              <span class="pill liquid-glass" data-i18n="pill.eyetracking">Eye Tracking</span>
+              <span class="pill liquid-glass" data-i18n="pill.calibration">AI Calibration</span>
+              <span class="pill liquid-glass" data-i18n="pill.interview">Interview Mode</span>
+            </div>
+          </div>
+          <div class="bottom-section">
+            <span class="bottom-label" data-i18n="bottom.label">AI-Powered Gaze Training</span>
+            <p class="bottom-quote" data-i18n="bottom.quote">"Your eyes speak before your words do — train them to say
+              confidence."</p>
+            <span class="bottom-author">GAZE GUARD</span>
+          </div>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="right-top">
+          <div class="social-bar liquid-glass">
+            <a href="#" class="social-link" aria-label="Twitter"><svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
+              </svg></a>
+            <a href="#" class="social-link" aria-label="LinkedIn"><svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                <rect x="2" y="9" width="4" height="12" />
+                <circle cx="4" cy="4" r="2" />
+              </svg></a>
+            <a href="#" class="social-link" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+              </svg></a>
+            <a href="#" class="social-link" aria-label="More"><svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg></a>
+          </div>
+          <button class="account-btn liquid-glass"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+              fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+              <path d="M20 3v4" />
+              <path d="M22 5h-4" />
+            </svg><span>AI Mode</span></button>
+        </div>
+        <div class="community-card liquid-glass">
+          <h3 data-i18n="community.title">Join the Community</h3>
+          <p data-i18n="community.desc">Connect with professionals mastering interview skills through AI-powered gaze
+            training.</p>
+        </div>
+        <div class="features-outer liquid-glass">
+          <div class="features-row">
+            <div class="feature-card liquid-glass">
+              <div class="icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z" />
+                  <path d="m14 7 3 3" />
+                  <path d="M5 6v4" />
+                  <path d="M19 14v4" />
+                  <path d="M10 2v2" />
+                  <path d="M7 8H3" />
+                  <path d="M21 16h-4" />
+                  <path d="M11 3H9" />
+                </svg></div>
+              <h4 data-i18n="feat.calibration">Smart Calibration</h4>
+              <p data-i18n="feat.calibration.desc">AI adapts to your unique gaze patterns with precision tracking</p>
+            </div>
+            <div class="feature-card liquid-glass">
+              <div class="icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg></div>
+              <h4 data-i18n="feat.archive">Session Archive</h4>
+              <p data-i18n="feat.archive.desc">Review past interviews with full gaze analysis & transcripts</p>
+            </div>
+          </div>
+          <div class="feature-wide liquid-glass">
+            <img class="feature-wide-img" src="hero-eye.png" alt="Advanced Tracking">
+            <div class="feature-wide-text">
+              <h4 data-i18n="feat.scoring">Advanced Gaze Scoring</h4>
+              <p data-i18n="feat.scoring.desc">Real-time focus metrics with MediaPipe FaceMesh + Iris technology</p>
+            </div>
+            <div class="add-btn liquid-glass">+</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- TAB 1: Tracker -->
-    <div class="tab-content active" id="tab-tracker">
-      <div class="vw">
-        <video id="vid" autoplay muted playsinline></video>
-        <canvas id="cvs"></canvas>
-        <div class="ov" id="ov">
-          <div class="sp" id="sp"></div>
-          <div id="mt" data-i18n="app.loading">Loading…</div>
+    <!-- ═══ HOW IT WORKS ═══ -->
+    <section class="section" id="howitworks">
+      <h2 class="section-title reveal" data-i18n="hiw.title">How It Works</h2>
+      <div class="hiw-steps">
+        <div class="hiw-step liquid-glass reveal">
+          <div class="hiw-num">1</div>
+          <h3 data-i18n="hiw.step1">Enable Camera</h3>
+          <p data-i18n="hiw.step1.desc">Allow browser access to your webcam for real-time face tracking</p>
         </div>
-        <div class="cal h" id="cal">
-          <div class="ring"><svg viewBox="0 0 94 94">
-              <circle id="calCircle" cx="47" cy="47" r="44" stroke-dasharray="276" stroke-dashoffset="276" />
-            </svg>
-            <div class="dot"></div>
-          </div>
-          <div class="txt" data-i18n="app.cal.lookhere">Look at the camera</div>
-          <div class="sub" id="calSub">Waiting…</div>
-          <button class="skip-btn" id="calSkip" data-i18n="app.cal.skip">Skip</button>
+        <div class="hiw-connector reveal">→</div>
+        <div class="hiw-step liquid-glass reveal">
+          <div class="hiw-num">2</div>
+          <h3 data-i18n="hiw.step2">Calibrate</h3>
+          <p data-i18n="hiw.step2.desc">Look at the screen center for a few seconds to set your baseline gaze</p>
         </div>
-        <div class="q-overlay" id="qOverlay">
-          <div class="q-header">
-            <span class="q-num" id="qNum">Question 1/5</span>
-            <span class="q-timer" id="qTimer">2:00</span>
-          </div>
-          <div class="q-text" id="qText"></div>
-          <div class="q-timer-bar">
-            <div class="q-timer-fill" id="qTimerFill"></div>
-          </div>
-        </div>
-        <div class="gd" id="gd">👁️</div>
-        <div class="speech-indicator" id="speechInd">
-          <div class="speech-dot"></div>REC
-        </div>
-        <div class="dbg-panel" id="dbgP"></div>
-      </div>
-      <div class="eb" id="eb"></div>
-      <div class="log" id="logEl"></div>
-      <div class="ctrls">
-        <button id="go" class="primary" disabled data-i18n="app.btn.start">▶ Start</button>
-        <button id="no" style="display:none" data-i18n="app.btn.stop">⏹ Stop</button>
-        <button id="dbgBtn" class="ghost" data-i18n="app.btn.debug">🔍 Debug</button>
-        <button id="recal" class="ghost" style="display:none" data-i18n="app.btn.calibrate">🎯 Calibrate</button>
-      </div>
-      <div class="transcript-panel" id="transcriptPanel">
-        <h3 data-i18n="app.transcript">Transcript</h3>
-        <div class="transcript-text" id="transcriptText"></div>
-      </div>
-      <div class="diff-container" id="difficultySelector"></div>
-      <div class="sr"><label data-i18n="app.label.sensitivity">Sensitivity</label><input type="range" id="sens" min="1"
-          max="50" value="15"><span class="svl" id="sv">15</span></div>
-      <div class="sr"><label data-i18n="app.label.volume">Volume</label><input type="range" id="vol" min="0" max="100"
-          value="50"><span class="svl" id="vv">50%</span></div>
-      <div class="sts">
-        <div class="st">
-          <div class="l" data-i18n="app.stat.looking">Looking</div>
-          <div class="v g" id="sT">0:00</div>
-        </div>
-        <div class="st">
-          <div class="l" data-i18n="app.stat.distractions">Distractions</div>
-          <div class="v r" id="sD">0</div>
-        </div>
-        <div class="st">
-          <div class="l" data-i18n="app.stat.focus">Focus</div>
-          <div class="v y" id="sF">—</div>
+        <div class="hiw-connector reveal">→</div>
+        <div class="hiw-step liquid-glass reveal">
+          <div class="hiw-num">3</div>
+          <h3 data-i18n="hiw.step3">Train & Improve</h3>
+          <p data-i18n="hiw.step3.desc">Practice interviews with real-time gaze feedback and performance scoring</p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- TAB 2: Interview -->
-    <div class="tab-content" id="tab-interview">
-      <div class="iw-setup">
-        <h2 data-i18n="app.iw.title">Interview Questions</h2>
-        <textarea id="iwQuestions" data-i18n="app.iw.placeholder" data-i18n-attr="placeholder"
-          placeholder="Enter one question per line, e.g.:&#10;&#10;Tell me about yourself.&#10;Why do you want this job?&#10;What is your greatest strength?"></textarea>
-        <div class="iw-row">
-          <label data-i18n="app.iw.timer">Timer (sec)</label>
-          <input type="number" id="iwTimer" min="15" max="600" value="120">
-          <label data-i18n="app.iw.order">Order</label>
-          <select id="iwOrder">
-            <option value="sequential" data-i18n="app.iw.sequential">Sequential</option>
-            <option value="random" data-i18n="app.iw.random">Random</option>
-          </select>
+    <!-- ═══ DEMO ═══ -->
+    <section class="section" id="demo">
+      <h2 class="section-title reveal" data-i18n="demo.title">Try It Now</h2>
+      <div class="demo-wrapper">
+        <div class="demo-canvas-wrap liquid-glass-strong reveal" style="border-radius:2rem">
+          <canvas class="demo-canvas" id="demoCanvas"></canvas>
         </div>
-        <div class="iw-hint" data-i18n="app.iw.hint">Each question will be shown with a countdown timer. Speech
-          recognition records your answer. Eye tracking monitors your focus throughout.</div>
-        <div class="ctrls">
-          <button id="iwStart" class="primary" data-i18n="app.iw.start">▶ Start Interview</button>
-          <button id="iwSave" class="ghost" data-i18n="app.iw.save">💾 Save</button>
-          <button id="iwLoad" class="ghost" data-i18n="app.iw.load">📂 Load</button>
-        </div>
+        <p class="demo-info reveal" data-i18n="demo.desc">Move your cursor — the eye follows your gaze. This is how our
+          AI tracks your focus.</p>
       </div>
-      <div class="results-panel" id="resultsPanel">
-        <h2 data-i18n="app.iw.results">Interview Results</h2>
-        <div id="resultsCards"></div>
-        <div class="sts" id="resultsStats"></div>
-        <div class="tips-container" id="tipsContainer"></div>
-        <div class="heatmap-container" id="heatmapContainer">
-          <div class="heatmap-title">Gaze Heatmap</div>
-          <canvas id="heatmapCanvas"></canvas>
-        </div>
-        <div class="ctrls">
-          <button id="iwRestart" class="primary" data-i18n="app.iw.newinterview">🔄 New Interview</button>
-          <button id="iwExport" class="ghost" data-i18n="app.export">📄 Export PDF</button>
-        </div>
-      </div>
-    </div>
+    </section>
 
-    <!-- TAB 3: Dashboard -->
-    <div class="tab-content" id="tab-dashboard">
-      <div id="dashboardContent"></div>
-    </div>
-  </main>
-  <footer data-i18n="app.footer">Gaze Guard · MediaPipe FaceMesh + Iris + Web Speech API · Data stays local</footer>
+    <!-- ═══ FAQ ═══ -->
+    <section class="section" id="faq">
+      <h2 class="section-title reveal" data-i18n="faq.title">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <div class="faq-item liquid-glass reveal">
+          <button class="faq-q"><span data-i18n="faq.q1">Do I need a special camera?</span><svg
+              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg></button>
+          <div class="faq-a">
+            <div class="faq-a-inner" data-i18n="faq.a1">No! Any standard webcam works perfectly. The AI uses MediaPipe
+              FaceMesh which runs entirely in your browser.</div>
+          </div>
+        </div>
+        <div class="faq-item liquid-glass reveal">
+          <button class="faq-q"><span data-i18n="faq.q2">Is my data private?</span><svg
+              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg></button>
+          <div class="faq-a">
+            <div class="faq-a-inner" data-i18n="faq.a2">100%. All processing happens locally in your browser. No video
+              or data is ever sent to any server.</div>
+          </div>
+        </div>
+        <div class="faq-item liquid-glass reveal">
+          <button class="faq-q"><span data-i18n="faq.q3">Which browsers are supported?</span><svg
+              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg></button>
+          <div class="faq-a">
+            <div class="faq-a-inner" data-i18n="faq.a3">Chrome, Edge, and other Chromium-based browsers work best.
+              Firefox and Safari have partial support.</div>
+          </div>
+        </div>
+        <div class="faq-item liquid-glass reveal">
+          <button class="faq-q"><span data-i18n="faq.q4">Can I use it on mobile?</span><svg
+              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg></button>
+          <div class="faq-a">
+            <div class="faq-a-inner" data-i18n="faq.a4">Yes, the tracker works with front-facing mobile cameras. Best
+              experience is on desktop for interview practice.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer" data-i18n="app.footer">Gaze Guard · MediaPipe FaceMesh + Iris + Web Speech API · Data
+      stays local</footer>
+
+  </div><!-- page-content -->
 
   <script src="i18n.js"></script>
-  <script src="features.js"></script>
-  <script type="module">
-    import { FaceLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs';
-
-    /* ═══ DOM REFS ═══ */
-    var vid = document.getElementById('vid'), cvs = document.getElementById('cvs'), ctx = cvs.getContext('2d');
-    var ov = document.getElementById('ov'), mt = document.getElementById('mt'), sp = document.getElementById('sp');
-    var gd = document.getElementById('gd'), bdg = document.getElementById('badge');
-    var goB = document.getElementById('go'), noB = document.getElementById('no');
-    var dbgB = document.getElementById('dbgBtn'), recalB = document.getElementById('recal');
-    var sensE = document.getElementById('sens'), svE = document.getElementById('sv');
-    var volE = document.getElementById('vol'), vvE = document.getElementById('vv');
-    var eb = document.getElementById('eb'), logE = document.getElementById('logEl'), dbgP = document.getElementById('dbgP');
-    var calOv = document.getElementById('cal'), calSub = document.getElementById('calSub');
-    var calCircle = document.getElementById('calCircle'), calSkip = document.getElementById('calSkip');
-    var qOverlay = document.getElementById('qOverlay'), qNum = document.getElementById('qNum');
-    var qText = document.getElementById('qText'), qTimer = document.getElementById('qTimer');
-    var qTimerFill = document.getElementById('qTimerFill');
-    var speechInd = document.getElementById('speechInd');
-    var transcriptPanel = document.getElementById('transcriptPanel');
-    var transcriptText = document.getElementById('transcriptText');
-    var iwQuestionsEl = document.getElementById('iwQuestions');
-    var iwTimerEl = document.getElementById('iwTimer'), iwOrderEl = document.getElementById('iwOrder');
-    var iwStartBtn = document.getElementById('iwStart'), iwSaveBtn = document.getElementById('iwSave');
-    var iwLoadBtn = document.getElementById('iwLoad'), iwRestartBtn = document.getElementById('iwRestart');
-    var resultsPanel = document.getElementById('resultsPanel'), resultsCards = document.getElementById('resultsCards');
-    var resultsStats = document.getElementById('resultsStats');
-
-    /* ═══ CALIBRATION CONSTANTS ═══ */
-    var CAL_CIRCUM = 276; /* 2*PI*44 */
-
-    /* ═══ TABS ═══ */
-    document.querySelectorAll('.tab').forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active') });
-        document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active') });
-        tab.classList.add('active');
-        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-        if (tab.dataset.tab === 'dashboard') createDashboard('dashboardContent');
-      });
+  <script>
+    // ═══ PRELOADER ═══
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('preloader').classList.add('hidden'), 1200);
     });
 
-    /* ═══ FEATURES INIT ═══ */
-    createDifficultyUI('difficultySelector');
-    setDifficulty(currentDifficulty);
-    document.getElementById('iwExport').addEventListener('click', function () { exportResultsPDF(iwResults); });
-    if (shouldShowOnboarding()) { setTimeout(startOnboarding, 1500); }
+    // ═══ PARTICLES ═══
+    (function () { const c = document.getElementById('particles'); for (let i = 0; i < 30; i++) { const p = document.createElement('div'); p.className = 'particle'; p.style.left = Math.random() * 100 + '%'; p.style.animationDuration = (8 + Math.random() * 12) + 's'; p.style.animationDelay = (Math.random() * 10) + 's'; p.style.width = p.style.height = (1 + Math.random() * 2) + 'px'; if (Math.random() > .5) p.style.background = 'rgba(56,189,248,.25)'; c.appendChild(p) } })();
 
-    /* ═══ STATE ═══ */
-    var faceLandmarker = null, running = false, audioCtx = null, showDebug = false;
-    var lookSec = 0, totalSec = 0, distN = 0, wasLook = true, beepCD = 0, statsIv = null;
-    var gazeBuf = [], BUF = 7;
-    var CAL_NEED = 20, calibrating = false, calSamples = [];
-    var baseline = { irisLX: 0.5, irisLY: 0.5, irisRX: 0.5, irisRY: 0.5, earRatio: 1, noseOff: 0, calibrated: false };
-    var lastTs = -1;
-    var IRIS_L = 468, IRIS_R = 473;
-    var L_EYE_IN = 133, L_EYE_OUT = 33, L_EYE_TOP = 159, L_EYE_BOT = 145;
-    var R_EYE_IN = 362, R_EYE_OUT = 263, R_EYE_TOP = 386, R_EYE_BOT = 374;
-    var L_CHEEK = 234, R_CHEEK = 454, NOSE_TIP = 1;
-    var L_LID_UP = [159, 158, 157, 173], L_LID_DN = [145, 153, 154, 163];
-    var R_LID_UP = [386, 385, 384, 398], R_LID_DN = [374, 380, 381, 382];
+    // ═══ NAV OVERLAY ═══
+    const navOverlay = document.getElementById('navOverlay');
+    document.getElementById('menuBtn').addEventListener('click', () => navOverlay.classList.add('open'));
+    document.getElementById('navClose').addEventListener('click', () => navOverlay.classList.remove('open'));
+    navOverlay.querySelectorAll('.nav-overlay-link').forEach(l => l.addEventListener('click', () => navOverlay.classList.remove('open')));
 
-    var iwActive = false, iwQuestions = [], iwCurrentIdx = 0, iwTimerSec = 120;
-    var iwTimerIv = null, iwTimeLeft = 0;
-    var iwResults = [];
-    var recognition = null, iwCurrentTranscript = '', iwInterimText = '';
+    // ═══ PUPIL TRACKING ═══
+    const pupil = document.querySelector('.logo-eye .pupil');
+    document.addEventListener('mousemove', e => { if (!pupil) return; const r = pupil.parentElement.getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const a = Math.atan2(e.clientY - cy, e.clientX - cx); const d = Math.min(Math.hypot(e.clientX - cx, e.clientY - cy), 5); pupil.style.transform = `translate(${Math.cos(a) * d}px,${Math.sin(a) * d}px)` });
 
-    /* ═══ EVENTS ═══ */
-    goB.addEventListener('click', startTracking);
-    noB.addEventListener('click', stopAll);
-    recalB.addEventListener('click', startCal);
-    calSkip.addEventListener('click', skipCal);
-    dbgB.addEventListener('click', function () { showDebug = !showDebug; dbgP.style.display = showDebug ? 'block' : 'none'; dbgB.classList.toggle('on', showDebug) });
-    sensE.addEventListener('input', function () { svE.textContent = sensE.value });
-    volE.addEventListener('input', function () { vvE.textContent = volE.value + '%' });
-    iwStartBtn.addEventListener('click', startInterview);
-    iwSaveBtn.addEventListener('click', saveQuestions);
-    iwLoadBtn.addEventListener('click', loadQuestions);
-    iwRestartBtn.addEventListener('click', resetInterview);
+    // ═══ HERO IMAGE PARALLAX ═══
+    const heroImg = document.querySelector('.hero-eye-img');
+    document.addEventListener('mousemove', e => { if (!heroImg) return; const x = (e.clientX / window.innerWidth - .5) * 10; const y = (e.clientY / window.innerHeight - .5) * 10; heroImg.style.transform = `translate(${x}px,${y}px)` });
 
-    function log(m) { logE.textContent = m }
+    // ═══ SCROLL REVEAL ═══
+    const revealObserver = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target) } }) }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-    /* ═══ i18n INIT ═══ */
+    // ═══ FAQ ACCORDION ═══
+    document.querySelectorAll('.faq-q').forEach(q => { q.addEventListener('click', () => { const item = q.parentElement; const wasOpen = item.classList.contains('open'); document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open')); if (!wasOpen) item.classList.add('open') }) });
+
+    // ═══ INTERACTIVE EYE DEMO ═══
+    (function () {
+      const canvas = document.getElementById('demoCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let W, H, mx = 0.5, my = 0.5;
+      function resize() { const r = canvas.parentElement.getBoundingClientRect(); canvas.width = r.width * 2; canvas.height = r.height * 2; W = canvas.width; H = canvas.height }
+      resize(); window.addEventListener('resize', resize);
+      canvas.parentElement.addEventListener('mousemove', e => { const r = canvas.parentElement.getBoundingClientRect(); mx = (e.clientX - r.left) / r.width; my = (e.clientY - r.top) / r.height });
+      canvas.parentElement.addEventListener('mouseleave', () => { mx = 0.5; my = 0.5 });
+
+      let t = 0;
+      function draw() {
+        t += 0.02; ctx.clearRect(0, 0, W, H);
+        const cx = W / 2, cy = H / 2, R = Math.min(W, H) * .38;
+        // Outer glow
+        const grd = ctx.createRadialGradient(cx, cy, R * .5, cx, cy, R * 1.4);
+        grd.addColorStop(0, 'rgba(0,230,118,0.03)'); grd.addColorStop(.5, 'rgba(56,189,248,0.02)'); grd.addColorStop(1, 'transparent');
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+        // Iris base
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        const ig = ctx.createRadialGradient(cx, cy, R * .1, cx, cy, R);
+        ig.addColorStop(0, '#0a1a0f'); ig.addColorStop(.3, '#0d2818'); ig.addColorStop(.6, '#0a3520'); ig.addColorStop(.85, '#00e676'); ig.addColorStop(1, '#064e2e');
+        ctx.fillStyle = ig; ctx.fill();
+        // Iris patterns
+        ctx.save(); ctx.translate(cx, cy);
+        for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2; const r1 = R * .25; const r2 = R * (.6 + Math.sin(a * 3 + t) * .15); ctx.beginPath(); ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); ctx.strokeStyle = `rgba(0,230,118,${.08 + Math.sin(a * 5 + t) * .05})`; ctx.lineWidth = 2; ctx.stroke() }
+        ctx.restore();
+        // Pupil
+        const px = cx + (mx - .5) * R * .5, py = cy + (my - .5) * R * .5;
+        const pr = R * .32;
+        ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
+        const pg = ctx.createRadialGradient(px, py, 0, px, py, pr);
+        pg.addColorStop(0, '#000'); pg.addColorStop(.8, '#000'); pg.addColorStop(1, '#0a1a0f');
+        ctx.fillStyle = pg; ctx.fill();
+        // Pupil highlight
+        const hx = px - pr * .3, hy = py - pr * .35;
+        ctx.beginPath(); ctx.arc(hx, hy, pr * .2, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(px + pr * .15, py + pr * .2, pr * .08, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fill();
+        // Outer ring
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(0,230,118,0.2)'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(56,189,248,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+        // Scan line across eye
+        const sY = cy + Math.sin(t * .7) * R * .8;
+        ctx.beginPath(); ctx.moveTo(cx - R, sY); ctx.lineTo(cx + R, sY); ctx.strokeStyle = 'rgba(0,230,118,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    // ═══ i18n INIT ═══
     createLangSwitcher('langSwitcher');
     setLanguage(currentLang);
-    window.addEventListener('langchange', function (e) {
-      bdg.textContent = t(document.body.classList.contains('looking') ? 'app.badge.looking' : document.body.classList.contains('away') ? 'app.badge.away' : 'app.badge.waiting');
-    });
 
-    /* ═══ SERVICE WORKER ═══ */
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () { }); }
-    function showErr(m) { eb.textContent = m; eb.style.display = 'block' }
-    function hideErr() { eb.style.display = 'none' }
-
-    function beep() {
-      var v = parseInt(volE.value); if (!v) return;
-      try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); var o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'square'; o.frequency.value = 880; g.gain.value = v / 250; o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + .18); o.stop(audioCtx.currentTime + .18) } catch (e) { }
-    }
-    function chime() {
-      try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); var now = audioCtx.currentTime;[523, 659, 784].forEach(function (f, i) { var o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.value = 0.15; o.start(now + i * 0.12); g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3); o.stop(now + i * 0.12 + 0.3) }) } catch (e) { }
-    }
-
-    /* ═══ MEDIAPIPE INIT ═══ */
-    async function initFaceLandmarker() {
-      mt.innerHTML = t('app.loading.mp'); sp.style.display = 'block'; log(t('app.loading.mp'));
-      try {
-        var fsr = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm');
-        log('WASM ✓');
-        var delegates = ['GPU', 'CPU'];
-        for (var di = 0; di < delegates.length; di++) {
-          try { faceLandmarker = await FaceLandmarker.createFromOptions(fsr, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: delegates[di] }, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: false, runningMode: 'VIDEO', numFaces: 1 }); log('Модель ✓ (' + delegates[di] + ')'); break }
-          catch (de) { if (di === delegates.length - 1) throw de; log('GPU недоступен, пробую CPU…') }
-        }
-        sp.style.display = 'none'; mt.innerHTML = t('app.press.start'); goB.disabled = false; goB.style.opacity = '1';
-      } catch (e) { sp.style.display = 'none'; mt.innerHTML = 'Error'; showErr('MediaPipe load failed: ' + e.message); log('Error: ' + e.message) }
-    }
-    initFaceLandmarker();
-
-    /* ═══ IRIS ═══ */
-    function irisRelative(lm, ii, ini, oui, ti, bi) { var ir = lm[ii], inn = lm[ini], ou = lm[oui], tp = lm[ti], bt = lm[bi]; var dx = ou.x - inn.x, dy = ou.y - inn.y, ln = Math.sqrt(dx * dx + dy * dy); if (ln < .001) return { x: .5, y: .5 }; var h = ((ir.x - inn.x) * dx + (ir.y - inn.y) * dy) / (ln * ln); var vx = bt.x - tp.x, vy = bt.y - tp.y, vl = Math.sqrt(vx * vx + vy * vy); if (vl < .001) return { x: h, y: .5 }; return { x: h, y: ((ir.x - tp.x) * vx + (ir.y - tp.y) * vy) / (vl * vl) } }
-    function eyeAR(lm, up, dn, ini, oui) { var inn = lm[ini], ou = lm[oui], hd = Math.hypot(ou.x - inn.x, ou.y - inn.y); if (hd < .001) return .3; var vs = 0; for (var i = 0; i < up.length; i++)vs += Math.hypot(lm[up[i]].x - lm[dn[i]].x, lm[up[i]].y - lm[dn[i]].y); return (vs / up.length) / hd }
-
-    /* ═══ TRACKING ═══ */
-    async function startTracking() {
-      if (!faceLandmarker) { showErr('FaceMesh не загружен'); return }
-      hideErr(); goB.style.display = 'none'; sp.style.display = 'block'; mt.innerHTML = t('app.camera'); log(t('app.camera'));
-      try {
-        var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
-        vid.srcObject = stream;
-        await new Promise(function (r, j) { vid.onloadedmetadata = function () { vid.play().then(r).catch(j) }; setTimeout(function () { j(new Error('Камера не ответила')) }, 15000) });
-        cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
-        log('Камера ' + vid.videoWidth + 'x' + vid.videoHeight + ' ✓');
-        await new Promise(function (r) { setTimeout(r, 500) });
-        ov.classList.add('h'); gd.style.display = 'flex'; noB.style.display = ''; recalB.style.display = '';
-        running = true; lookSec = 0; totalSec = 0; distN = 0; wasLook = true; gazeBuf = []; lastTs = -1;
-        if (!audioCtx) try { audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { }
-        gazeLoop(); startCal();
-      } catch (e) { sp.style.display = 'none'; mt.innerHTML = 'Ошибка'; showErr(e.message || String(e)); goB.style.display = '' }
-    }
-
-    function stopAll() {
-      stopInterview(); running = false; calibrating = false;
-      if (statsIv) { clearInterval(statsIv); statsIv = null }
-      var s = vid.srcObject; if (s) s.getTracks().forEach(function (t) { t.stop() }); vid.srcObject = null;
-      ctx.clearRect(0, 0, cvs.width, cvs.height); gd.style.display = 'none'; calOv.classList.add('h');
-      ov.classList.remove('h'); sp.style.display = 'none'; mt.innerHTML = t('app.press.start');
-      noB.style.display = 'none'; recalB.style.display = 'none'; goB.style.display = '';
-      document.body.className = ''; bdg.textContent = t('app.badge.waiting'); log(t('app.stop'));
-      transcriptPanel.classList.remove('active'); qOverlay.classList.remove('active');
-    }
-
-    /* ═══ CALIBRATION ═══ */
-    function startCal() { calibrating = true; calSamples = []; baseline.calibrated = false; calOv.classList.remove('h'); calCircle.setAttribute('stroke-dashoffset', String(CAL_CIRCUM)); calSub.textContent = 'Ожидание лица…' }
-    function skipCal() { calibrating = false; baseline.calibrated = false; calOv.classList.add('h'); log('Стандартные значения'); startStats() }
-    function addCal(s) {
-      calSamples.push(s); var pct = Math.min(calSamples.length / CAL_NEED, 1);
-      calCircle.setAttribute('stroke-dashoffset', String(Math.round(CAL_CIRCUM * (1 - pct))));
-      calSub.textContent = 'Сбор: ' + calSamples.length + '/' + CAL_NEED;
-      if (calSamples.length >= CAL_NEED) finishCal();
-    }
-    function finishCal() {
-      calibrating = false; calOv.classList.add('h');
-      if (calSamples.length < 3) { baseline.calibrated = false; startStats(); return }
-      function med(a) { var s = a.slice().sort(function (x, y) { return x - y }); var m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2 }
-      baseline.irisLX = med(calSamples.map(function (s) { return s.ilx })); baseline.irisLY = med(calSamples.map(function (s) { return s.ily }));
-      baseline.irisRX = med(calSamples.map(function (s) { return s.irx })); baseline.irisRY = med(calSamples.map(function (s) { return s.iry }));
-      baseline.noseOff = med(calSamples.map(function (s) { return s.no })); baseline.earRatio = med(calSamples.map(function (s) { return s.er }));
-      baseline.calibrated = true; log('Калибровка ✓'); startStats();
-    }
-    function startStats() { if (statsIv) clearInterval(statsIv); statsIv = setInterval(function () { totalSec++; if (document.body.classList.contains('looking')) lookSec++; updStats() }, 1000) }
-
-    /* ═══ GAZE LOOP ═══ */
-    function gazeLoop() { if (!running) return; detect(); requestAnimationFrame(gazeLoop) }
-    function detect() {
-      if (!faceLandmarker || vid.readyState < 2) return;
-      var now = performance.now(); if (now - lastTs < 80) return;
-      var res = faceLandmarker.detectForVideo(vid, now); lastTs = now;
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-      if (!res.faceLandmarks || !res.faceLandmarks.length) { if (calibrating) calSub.textContent = 'Лицо не найдено…'; else pushGaze(false); return }
-      var lm = res.faceLandmarks[0], vw = cvs.width, vh = cvs.height;
-
-      ctx.fillStyle = 'rgba(0,230,118,0.2)';
-      [IRIS_L, IRIS_R, NOSE_TIP, L_EYE_IN, L_EYE_OUT, R_EYE_IN, R_EYE_OUT].forEach(function (i) { if (lm[i]) { ctx.beginPath(); ctx.arc(lm[i].x * vw, lm[i].y * vh, 2, 0, Math.PI * 2); ctx.fill() } });
-      var le = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246], re = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466];
-      ctx.strokeStyle = 'rgba(56,189,248,0.25)'; ctx.lineWidth = 1;
-      [le, re].forEach(function (idxs) { ctx.beginPath(); idxs.forEach(function (idx, j) { var p = lm[idx]; if (!j) ctx.moveTo(p.x * vw, p.y * vh); else ctx.lineTo(p.x * vw, p.y * vh) }); ctx.closePath(); ctx.stroke() });
-      ctx.fillStyle = 'rgba(56,189,248,0.5)';
-      [IRIS_L, IRIS_R].forEach(function (idx) { var p = lm[idx]; ctx.beginPath(); ctx.arc(p.x * vw, p.y * vh, 4, 0, Math.PI * 2); ctx.fill() });
-
-      var iL = irisRelative(lm, IRIS_L, L_EYE_IN, L_EYE_OUT, L_EYE_TOP, L_EYE_BOT);
-      var iR = irisRelative(lm, IRIS_R, R_EYE_IN, R_EYE_OUT, R_EYE_TOP, R_EYE_BOT);
-      var eL = eyeAR(lm, L_LID_UP, L_LID_DN, L_EYE_IN, L_EYE_OUT), eR = eyeAR(lm, R_LID_UP, R_LID_DN, R_EYE_IN, R_EYE_OUT);
-      var ear = (eL + eR) / 2, closed = ear < .16;
-      var nT = lm[NOSE_TIP], emx = (lm[IRIS_L].x + lm[IRIS_R].x) / 2, nOff = nT.x - emx;
-      var lC = lm[L_CHEEK], rC = lm[R_CHEEK];
-      var dL = Math.hypot(lm[IRIS_L].x - lC.x, lm[IRIS_L].y - lC.y), dR = Math.hypot(lm[IRIS_R].x - rC.x, lm[IRIS_R].y - rC.y);
-      var eRatio = Math.min(dL, dR) / (Math.max(dL, dR) + .001);
-      var ld = 0, lu = 0, ll = 0, lr = 0;
-      if (res.faceBlendshapes && res.faceBlendshapes.length) { var bs = res.faceBlendshapes[0].categories; for (var i = 0; i < bs.length; i++) { var nm = bs[i].categoryName, sc = bs[i].score; if (nm === 'eyeLookDownLeft' || nm === 'eyeLookDownRight') ld = Math.max(ld, sc); if (nm === 'eyeLookUpLeft' || nm === 'eyeLookUpRight') lu = Math.max(lu, sc); if (nm === 'eyeLookOutLeft' || nm === 'eyeLookInRight') ll = Math.max(ll, sc); if (nm === 'eyeLookInLeft' || nm === 'eyeLookOutRight') lr = Math.max(lr, sc) } }
-
-      if (calibrating) { if (!closed) addCal({ ilx: iL.x, ily: iL.y, irx: iR.x, iry: iR.y, no: nOff, er: eRatio }); return }
-
-      var bLX = baseline.calibrated ? baseline.irisLX : .5, bLY = baseline.calibrated ? baseline.irisLY : .5;
-      var bRX = baseline.calibrated ? baseline.irisRX : .5, bRY = baseline.calibrated ? baseline.irisRY : .5;
-      var bN = baseline.calibrated ? baseline.noseOff : 0, bE = baseline.calibrated ? baseline.earRatio : 1;
-      var sens = parseInt(sensE.value), k = .4 + (sens - 1) * .053;
-      var sILX = Math.exp(-Math.pow(Math.abs(iL.x - bLX) * k / .15, 2)), sILY = Math.exp(-Math.pow(Math.abs(iL.y - bLY) * k / .20, 2));
-      var sIRX = Math.exp(-Math.pow(Math.abs(iR.x - bRX) * k / .15, 2)), sIRY = Math.exp(-Math.pow(Math.abs(iR.y - bRY) * k / .20, 2));
-      var gDev = Math.max(ld, ll, lr) * .8 + lu * .3, sB = Math.exp(-Math.pow(gDev * k / .4, 2));
-      var sN = Math.exp(-Math.pow(Math.abs(nOff - bN) * k / .25, 2)), sE = Math.exp(-Math.pow(Math.abs(eRatio - bE) * k / .35, 2));
-      var oF = Math.max(Math.abs(nT.x - .5), Math.abs(nT.y - .5)), sF = oF < .38 ? 1 : Math.max(0, 1 - (oF - .38) / .12);
-      var sEy = closed ? 0 : 1;
-      var score = sILX * .18 + sILY * .12 + sIRX * .18 + sIRY * .12 + sB * .15 + sN * .08 + sE * .07 + sF * .05 + sEy * .05;
-      var thr = .35 + (sens - 1) * .009, looking = score > thr && !closed;
-
-      if (showDebug) dbgP.innerHTML = '<b>' + score.toFixed(2) + '/' + thr.toFixed(2) + '</b> ' + (looking ? '<span style="color:var(--green)">LOOK</span>' : '<span style="color:var(--red)">AWAY</span>') + '<br>IrisL:' + iL.x.toFixed(3) + ',' + iL.y.toFixed(3) + ' R:' + iR.x.toFixed(3) + ',' + iR.y.toFixed(3) + '<br>Blend D:' + ld.toFixed(2) + ' U:' + lu.toFixed(2) + ' L:' + ll.toFixed(2) + ' R:' + lr.toFixed(2) + '<br>EAR:' + ear.toFixed(3) + ' Cal:' + (baseline.calibrated ? 'Y' : 'N');
-      /* Record heatmap data from nose tip position */
-      if (typeof recordHeatmapPoint === 'function') {
-        recordHeatmapPoint(nT.x, nT.y, looking);
-      }
-      pushGaze(looking);
-    }
-
-    function pushGaze(l) { gazeBuf.push(l ? 1 : 0); if (gazeBuf.length > BUF) gazeBuf.shift(); var s = 0; for (var i = 0; i < gazeBuf.length; i++)s += gazeBuf[i]; setGaze(s >= 3) }
-    function setGaze(looking) {
-      if (looking) { document.body.className = 'looking'; bdg.textContent = t('app.badge.looking'); gd.textContent = '👁️'; wasLook = true; beepCD = 0 }
-      else { document.body.className = 'away'; bdg.textContent = t('app.badge.away'); gd.textContent = '⚠️'; if (wasLook) { distN++; wasLook = false } var now = Date.now(); if (now - beepCD > 900) { beep(); beepCD = now } }
-    }
-    function updStats() { var m = Math.floor(lookSec / 60), s = lookSec % 60; document.getElementById('sT').textContent = m + ':' + String(s).padStart(2, '0'); document.getElementById('sD').textContent = distN; if (totalSec > 0) document.getElementById('sF').textContent = Math.round(lookSec / totalSec * 100) + '%' }
-
-    /* ═══ INTERVIEW ═══ */
-    function parseQuestions() { var r = iwQuestionsEl.value.trim(); if (!r) return []; return r.split('\n').map(function (l) { return l.trim() }).filter(function (l) { return l.length > 0 }) }
-    function saveQuestions() { var qs = parseQuestions(); if (!qs.length) return; localStorage.setItem('gaze_iw_questions', JSON.stringify(qs)); localStorage.setItem('gaze_iw_timer', iwTimerEl.value); localStorage.setItem('gaze_iw_order', iwOrderEl.value); log(t('app.saved') + ' (' + qs.length + ')') }
-    function loadQuestions() { var sv = localStorage.getItem('gaze_iw_questions'); if (!sv) return; iwQuestionsEl.value = JSON.parse(sv).join('\n'); var tm = localStorage.getItem('gaze_iw_timer'); if (tm) iwTimerEl.value = tm; var o = localStorage.getItem('gaze_iw_order'); if (o) iwOrderEl.value = o; log(t('app.loaded')) }
-
-    async function startInterview() {
-      iwQuestions = parseQuestions(); if (!iwQuestions.length) { showErr('Введите хотя бы один вопрос'); return }
-      iwTimerSec = parseInt(iwTimerEl.value) || 120;
-      if (iwOrderEl.value === 'random') { for (var i = iwQuestions.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = iwQuestions[i]; iwQuestions[i] = iwQuestions[j]; iwQuestions[j] = tmp } }
-      hideErr(); iwCurrentIdx = 0; iwResults = []; resultsPanel.classList.remove('active');
-      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active') });
-      document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active') });
-      document.querySelector('[data-tab="tracker"]').classList.add('active');
-      document.getElementById('tab-tracker').classList.add('active');
-      if (!running) await startTracking(); if (!running) return;
-      lookSec = 0; totalSec = 0; distN = 0; iwActive = true; transcriptPanel.classList.add('active');
-      if (typeof startHeatmapRecording === 'function') startHeatmapRecording();
-      showQuestion(0);
-    }
-
-    function showQuestion(idx) {
-      if (idx >= iwQuestions.length) { finishInterview(); return }
-      iwCurrentIdx = idx; qNum.textContent = 'Question ' + (idx + 1) + '/' + iwQuestions.length;
-      qText.textContent = iwQuestions[idx]; qOverlay.classList.add('active');
-      qTimerFill.style.width = '100%'; qTimerFill.classList.remove('urgent'); qTimer.classList.remove('urgent');
-      iwTimeLeft = iwTimerSec; iwCurrentTranscript = ''; iwInterimText = ''; transcriptText.innerHTML = ''; updateTimerDisplay();
-      var qLS = 0, qTS = 0, qDN = distN; chime(); startSpeechRecognition();
-      if (iwTimerIv) clearInterval(iwTimerIv);
-      iwTimerIv = setInterval(function () { iwTimeLeft--; qTS++; if (document.body.classList.contains('looking')) qLS++; updateTimerDisplay(); if (iwTimeLeft <= 10) { qTimerFill.classList.add('urgent'); qTimer.classList.add('urgent') } if (iwTimeLeft <= 0) { clearInterval(iwTimerIv); iwTimerIv = null; saveQuestionResult(qLS, qTS, distN - qDN); showQuestion(iwCurrentIdx + 1) } }, 1000);
-    }
-    function updateTimerDisplay() { var m = Math.floor(iwTimeLeft / 60), s = iwTimeLeft % 60; qTimer.textContent = m + ':' + String(s).padStart(2, '0'); qTimerFill.style.width = Math.max(0, (iwTimeLeft / iwTimerSec) * 100) + '%' }
-    function saveQuestionResult(qLS, qTS, qD) { stopSpeechRecognition(); iwResults.push({ question: iwQuestions[iwCurrentIdx], transcript: iwCurrentTranscript.trim() || t('app.noanswer'), timeTaken: iwTimerSec - iwTimeLeft, totalTime: iwTimerSec, focusPct: qTS > 0 ? Math.round(qLS / qTS * 100) : 0, distractions: qD }) }
-
-    function finishInterview() {
-      iwActive = false; qOverlay.classList.remove('active'); speechInd.classList.remove('listening'); transcriptPanel.classList.remove('active');
-      if (iwTimerIv) { clearInterval(iwTimerIv); iwTimerIv = null }
-      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active') });
-      document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active') });
-      document.querySelector('[data-tab="interview"]').classList.add('active');
-      document.getElementById('tab-interview').classList.add('active');
-      showResults();
-    }
-    function stopInterview() { if (!iwActive) return; if (iwTimerIv) { clearInterval(iwTimerIv); iwTimerIv = null } stopSpeechRecognition(); iwActive = false; qOverlay.classList.remove('active'); speechInd.classList.remove('listening'); transcriptPanel.classList.remove('active') }
-    function resetInterview() { resultsPanel.classList.remove('active'); iwResults = []; document.querySelector('.iw-setup').style.display = ''; document.getElementById('tipsContainer').classList.remove('active'); document.getElementById('heatmapContainer').classList.remove('active'); }
-
-    function showResults() {
-      document.querySelector('.iw-setup').style.display = 'none'; resultsPanel.classList.add('active');
-      if (typeof stopHeatmapRecording === 'function') stopHeatmapRecording();
-      var html = '', tF = 0, tD = 0;
-      iwResults.forEach(function (r, i) {
-        tF += r.focusPct; tD += r.distractions;
-        html += '<div class="result-card"><div class="rq">Q' + (i + 1) + ': ' + esc(r.question) + '</div><div class="ra' + (r.transcript === '(no answer)' ? ' empty' : '') + '">' + esc(r.transcript) + '</div><div class="rmeta"><span style="color:var(--yellow)">' + r.timeTaken + 's / ' + r.totalTime + 's</span><span style="color:var(--green)">Focus: ' + r.focusPct + '%</span><span style="color:var(--red)">Distr: ' + r.distractions + '</span></div></div>'
-      });
-      resultsCards.innerHTML = html;
-      var avg = iwResults.length ? Math.round(tF / iwResults.length) : 0;
-      resultsStats.innerHTML = '<div class="st"><div class="l">' + t('app.iw.questions') + '</div><div class="v g">' + iwResults.length + '</div></div><div class="st"><div class="l">' + t('app.iw.avgfocus') + '</div><div class="v y">' + avg + '%</div></div><div class="st"><div class="l">' + t('app.stat.distractions') + '</div><div class="v r">' + tD + '</div></div>';
-
-      /* AI Tips */
-      if (typeof generateTips === 'function') {
-        var tips = generateTips(iwResults);
-        renderTips(tips, 'tipsContainer');
-        document.getElementById('tipsContainer').classList.add('active');
-      }
-
-      /* Heatmap */
-      if (typeof renderHeatmap === 'function' && heatmapData && heatmapData.length > 0) {
-        var hc = document.getElementById('heatmapContainer');
-        hc.classList.add('active');
-        renderHeatmap('heatmapCanvas', 640, 480);
-      }
-
-      /* Save session to history */
-      if (typeof saveSession === 'function') {
-        saveSession({ duration: totalSec, focusPct: avg, distractions: tD, questions: iwResults.length, results: iwResults });
-      }
-    }
-    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
-
-    /* ═══ SPEECH RECOGNITION ═══ */
-    var recFinalIdx = 0, recRestartCount = 0, REC_MAX_RESTARTS = 80;
-    var NOISE_EN = /^(uh+|um+|hmm+|ah+|oh+|huh|mhm)\.?$/i;
-    var _SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var _speechNetworkFailed = false; /* flag to stop restarts on HTTP */
-
-    var SPEECH_LANGS = {
-      en: 'en-US', ru: 'ru-RU', zh: 'zh-CN', fr: 'fr-FR',
-      de: 'de-DE', ar: 'ar-SA', es: 'es-ES'
-    };
-    function getSpeechLang() { return SPEECH_LANGS[currentLang] || 'en-US'; }
-
-    function startSpeechRecognition() {
-      stopSpeechRecognition();
-      if (!_SR) { log('Speech API not supported'); return; }
-      /* If we already know network fails (HTTP), don't even try */
-      if (_speechNetworkFailed) { log('Speech requires HTTPS'); return; }
-      recFinalIdx = 0; recRestartCount = 0;
-
-      recognition = new _SR();
-      recognition.lang = getSpeechLang();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 3;
-
-      recognition.onstart = function () {
-        speechInd.classList.add('listening');
-      };
-
-      recognition.onend = function () {
-        speechInd.classList.remove('listening');
-        /* Do NOT restart if network failed — it will just re-prompt for mic */
-        if (_speechNetworkFailed) return;
-        if (!iwActive || iwTimeLeft <= 0) return;
-        recRestartCount++;
-        if (recRestartCount >= REC_MAX_RESTARTS) return;
-        recFinalIdx = 0;
-        var delay = Math.min(500 + recRestartCount * 100, 3000);
-        setTimeout(function () {
-          if (!iwActive || iwTimeLeft <= 0 || !recognition || _speechNetworkFailed) return;
-          try { recognition.start(); } catch (ex) { }
-        }, delay);
-      };
-
-      recognition.onerror = function (e) {
-        if (e.error === 'no-speech' || e.error === 'aborted') return;
-        if (e.error === 'network') {
-          /* On HTTP, speech API can't reach Google's servers — stop retrying */
-          _speechNetworkFailed = true;
-          log(location.protocol === 'https:' ? 'Speech: network error' : 'Speech needs HTTPS (use npx serve)');
-          stopSpeechRecognition();
-          return;
-        }
-        if (e.error === 'not-allowed') {
-          _speechNetworkFailed = true;
-          log('Microphone access denied');
-          stopSpeechRecognition();
-          return;
-        }
-        log('Speech: ' + e.error);
-      };
-
-      recognition.onresult = function (e) {
-        var newFinal = '', interim = '';
-        for (var i = recFinalIdx; i < e.results.length; i++) {
-          if (e.results[i].isFinal) {
-            var best = e.results[i][0];
-            for (var a = 1; a < e.results[i].length; a++) {
-              if (e.results[i][a].confidence > best.confidence) best = e.results[i][a];
-            }
-            var txt = best.transcript.trim();
-            if (!txt) { recFinalIdx = i + 1; continue; }
-            if (currentLang === 'en' && NOISE_EN.test(txt)) { recFinalIdx = i + 1; continue; }
-            txt = txt.charAt(0).toUpperCase() + txt.slice(1);
-            if (!/[.!?,:;]$/.test(txt)) txt += '.';
-            newFinal += txt + ' ';
-            recFinalIdx = i + 1;
-          } else {
-            interim = e.results[i][0].transcript;
-          }
-        }
-        if (newFinal) iwCurrentTranscript += newFinal;
-        iwInterimText = interim;
-        transcriptText.innerHTML = esc(iwCurrentTranscript) + (interim ? '<span class="interim"> ' + esc(interim) + '</span>' : '');
-        transcriptPanel.scrollTop = transcriptPanel.scrollHeight;
-      };
-
-      try { recognition.start(); } catch (e) { log('Speech err: ' + e.message); }
-    }
-
-    function stopSpeechRecognition() {
-      if (recognition) {
-        try { recognition.onend = null; recognition.onerror = null; recognition.stop(); } catch (e) { }
-        recognition = null;
-      }
-      speechInd.classList.remove('listening');
-    }
-
-    /* ═══ LOAD SAVED ═══ */
-    var sq = localStorage.getItem('gaze_iw_questions');
-    if (sq) { try { iwQuestionsEl.value = JSON.parse(sq).join('\n') } catch (e) { } var st = localStorage.getItem('gaze_iw_timer'); if (st) iwTimerEl.value = st; var so = localStorage.getItem('gaze_iw_order'); if (so) iwOrderEl.value = so }
-
+    // ═══ SERVICE WORKER ═══
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => { }) }
   </script>
 </body>
 
