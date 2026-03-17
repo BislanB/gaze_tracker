@@ -1,0 +1,20 @@
+{
+  "name": "Gaze Guard",
+  "short_name": "GazeGuard",
+  "description": "AI-Powered Interview Eye-Tracking Trainer",
+  "start_url": "/landing.html",
+  "display": "standalone",
+  "background_color": "#050508",
+  "theme_color": "#050508",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "hero-eye.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "en"
+}
